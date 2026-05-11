@@ -1,6 +1,8 @@
 const express = require('express');
 const fetch = require('node-fetch');
 const app = express();
+const path = require('path');
+app.use(express.static('public'));
 app.use(express.json());
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
