@@ -213,7 +213,7 @@ async function connect() {
 }
 
 async function callRender(action, extra={}) {
-  const r = await fetch(RENDER_API, {
+  const RENDER_API = "https://mozok-agent.onrender.com/api/graph"; const r = await fetch(RENDER_API, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({tenantId:tid(),clientId:cid(),clientSecret:cs(),userEmail:em(),action,...extra})
