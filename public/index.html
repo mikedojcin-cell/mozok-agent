@@ -1,1 +1,356 @@
-a
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozok Outlook Agent</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f1117; color: #e0e0e0; min-height: 100vh; }
+  .header { background: linear-gradient(135deg, #0078d4, #005a9e); padding: 20px 28px; display: flex; align-items: center; }
+  .logo { font-size: 22px; font-weight: 700; color: #fff; }
+  .sub { font-size: 12px; color: #a8d4f5; margin-top: 2px; }
+  #statusBadge { margin-left: auto; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #2b1800; color: #f7ba1e; border: 1px solid #ca5010; }
+  #statusBadge.connected { background: #0d2b0d; color: #6ccb5f; border-color: #107c10; }
+  .container { display: grid; grid-template-columns: 210px 1fr; min-height: calc(100vh - 68px); }
+  .sidebar { background: #161b27; border-right: 1px solid #2a2f3d; padding: 20px 0; }
+  .sec { padding: 8px 20px 4px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #555; }
+  .nav { padding: 10px 20px; cursor: pointer; font-size: 13px; color: #aaa; border-left: 3px solid transparent; display: flex; align-items: center; gap: 10px; transition: all 0.15s; }
+  .nav:hover { background: #1e2435; color: #fff; }
+  .nav.active { background: #1a2540; color: #4fa3e0; border-left-color: #0078d4; }
+  .main { padding: 28px; overflow-y: auto; }
+  .panel { display: none; } .panel.active { display: block; }
+  .card { background: #1a1f2e; border: 1px solid #2a2f3d; border-radius: 10px; padding: 22px; margin-bottom: 18px; }
+  .card h3 { font-size: 15px; color: #fff; margin-bottom: 16px; }
+  label { display: block; font-size: 12px; color: #888; margin-bottom: 5px; margin-top: 14px; }
+  input, select, textarea { width: 100%; padding: 9px 12px; background: #0f1420; border: 1px solid #2a2f3d; border-radius: 6px; color: #e0e0e0; font-size: 13px; outline: none; }
+  input:focus, select:focus { border-color: #0078d4; }
+  textarea { resize: vertical; min-height: 70px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 16px; }
+  .blue { background: #0078d4; color: #fff; } .blue:hover { background: #106ebe; }
+  .green { background: #107c10; color: #fff; } .green:hover { background: #0e6b0e; }
+  .grey { background: #2a2f3d; color: #ccc; }
+  .log { background: #0a0d14; border: 1px solid #1e2335; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 14px; display: none; }
+  .ls { color: #6ccb5f; } .le { color: #e74c3c; } .li { color: #4fa3e0; }
+  .form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .qt-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 10px; margin-bottom: 16px; }
+  .qt { background: #0f1420; border: 1px solid #2a2f3d; border-radius: 8px; padding: 12px; cursor: pointer; }
+  .qt:hover { border-color: #0078d4; }
+  .qt-i { font-size: 18px; margin-bottom: 6px; }
+  .qt-t { font-weight: 600; color: #ccc; font-size: 12px; }
+  .qt-d { color: #666; font-size: 11px; }
+  .rday { padding: 5px 12px; border-radius: 15px; border: 1px solid #2a2f3d; background: #0f1420; color: #888; font-size: 12px; cursor: pointer; }
+  .rday.on { background: #0d2040; border-color: #0078d4; color: #4fa3e0; }
+  .rdays { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .ti { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #0f1420; border-radius: 7px; margin-bottom: 8px; border: 1px solid #2a2f3d; }
+  .ti-c { flex: 1; } .ti-t { font-size: 13px; color: #ccc; } .ti-m { font-size: 11px; color: #555; margin-top: 2px; }
+  .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: sp .7s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  .info { background: #0d2040; border: 1px solid #0078d4; color: #4fa3e0; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div><div class="logo">⚡ Mozok Outlook Agent</div><div class="sub">Microsoft 365 Task & Calendar Automation</div></div>
+  <div id="statusBadge">● Not Connected</div>
+</div>
+<div class="container">
+  <div class="sidebar">
+    <div class="sec">Setup</div>
+    <div class="nav active" onclick="show('auth')" id="nav-auth">🔐 Connect Outlook</div>
+    <div class="sec" style="margin-top:16px">Actions</div>
+    <div class="nav" onclick="show('tasks')" id="nav-tasks">✅ Create Tasks</div>
+    <div class="nav" onclick="show('recurring')" id="nav-recurring">🔁 Recurring</div>
+    <div class="nav" onclick="show('calendar')" id="nav-calendar">📅 Calendar</div>
+    <div class="nav" onclick="show('playbook')" id="nav-playbook">🚀 Mozok Playbook</div>
+  </div>
+  <div class="main">
+
+    <!-- AUTH -->
+    <div class="panel active" id="panel-auth">
+      <div class="card" style="max-width:480px">
+        <h3>🔐 Connect to Microsoft 365</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:4px;">Credentials are pre-filled. Just click Connect.</p>
+        <label>Tenant ID</label><input id="tid" value="26b2d778-d390-4c96-9c8b-96cf1bf43c5d">
+        <label>Client ID</label><input id="cid" value="c141d1d2-14a9-4a2a-b965-aca133a394f4">
+        <label>Client Secret</label><input type="password" id="cs" value="kcP8Q~bQ1w49F4JiVUE3HJCiOYWqiw0FFJMp0ayl">
+        <label>Email</label><input id="em" value="mike@mozok.co">
+        <button class="btn blue" onclick="connect()"><span id="asp" style="display:none" class="spin"></span>🔌 Connect</button>
+        <div class="log" id="alog"></div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="panel" id="panel-tasks">
+      <div class="card">
+        <h3>⚡ Quick Tasks</h3>
+        <div class="qt-grid">
+          <div class="qt" onclick="qt('Send Mozok Cold Emails — Batch of 10','Send 10 cold emails via HubSpot. Best: Tue/Wed/Thu 8–9am.')"><div class="qt-i">📧</div><div class="qt-t">Cold Emails</div><div class="qt-d">Batch of 10</div></div>
+          <div class="qt" onclick="qt('Follow-Up Calls — Warm Mozok Leads','Call leads who opened emails. Best: 4–5:30pm.')"><div class="qt-i">📞</div><div class="qt-t">Follow-Up Calls</div><div class="qt-d">Warm leads</div></div>
+          <div class="qt" onclick="qt('Write & Post Mozok LinkedIn Content','Write one text-only post. Rotate: problem, tip, proof, BTS.')"><div class="qt-i">✍️</div><div class="qt-t">LinkedIn Post</div><div class="qt-d">Mozok content</div></div>
+          <div class="qt" onclick="qt('Ramstar Follow-Up — JJ Tools / Reps','Review open action items. Follow up with Don Noble / Bobby.')"><div class="qt-i">🔧</div><div class="qt-t">Ramstar Follow-Up</div><div class="qt-d">JJ Tools / reps</div></div>
+          <div class="qt" onclick="qt('Mozok Weekly Pipeline Review','Check HubSpot opens, replies, booked calls. Update forecast.')"><div class="qt-i">📊</div><div class="qt-t">Pipeline Review</div><div class="qt-d">Weekly check</div></div>
+          <div class="qt" onclick="qt('','')"><div class="qt-i">➕</div><div class="qt-t">Custom Task</div><div class="qt-d">Anything</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>📝 Task Details</h3>
+        <label>Title</label><input id="tt" placeholder="Task title">
+        <div class="form2" style="margin-top:14px">
+          <div><label>Due Date</label><input type="date" id="td2"></div>
+          <div><label>Priority</label><select id="tp"><option value="high">🔴 High</option><option value="normal" selected>🟡 Normal</option><option value="low">🟢 Low</option></select></div>
+        </div>
+        <label>Notes</label><textarea id="tn" placeholder="Details..."></textarea>
+        <div style="display:flex;gap:10px">
+          <button class="btn blue" onclick="createTask()"><span id="tsp" style="display:none" class="spin"></span>✅ Create in Outlook</button>
+          <button class="btn grey" onclick="clearTask()" style="margin-top:16px">Clear</button>
+        </div>
+        <div class="log" id="tlog"></div>
+      </div>
+      <div class="card"><h3>📋 Created This Session</h3><div id="tlist"><div style="color:#555;font-size:13px">No tasks yet.</div></div></div>
+    </div>
+
+    <!-- RECURRING -->
+    <div class="panel" id="panel-recurring">
+      <div class="info">🔁 Creates individual Outlook tasks for each occurrence over the selected weeks.</div>
+      <div class="card">
+        <h3>🔁 Set Up Recurring Reminder</h3>
+        <label>Title</label><input id="rt" placeholder="e.g. Send Mozok cold emails">
+        <label style="margin-top:14px">Repeat On</label>
+        <div class="rdays">
+          <div class="rday" onclick="td(this,'Mon')">Mon</div>
+          <div class="rday" onclick="td(this,'Tue')">Tue</div>
+          <div class="rday" onclick="td(this,'Wed')">Wed</div>
+          <div class="rday" onclick="td(this,'Thu')">Thu</div>
+          <div class="rday" onclick="td(this,'Fri')">Fri</div>
+        </div>
+        <div class="form2" style="margin-top:14px">
+          <div><label>Time</label><input type="time" id="rtm" value="08:00"></div>
+          <div><label>Weeks</label><select id="rw"><option value="4">4 weeks</option><option value="8" selected>8 weeks</option><option value="12">12 weeks</option></select></div>
+        </div>
+        <label>Notes</label><textarea id="rn" placeholder="Instructions..."></textarea>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn blue" onclick="createRecurring()"><span id="rsp" style="display:none" class="spin"></span>🔁 Create Recurring</button>
+          <button class="btn grey" onclick="loadMozok()" style="margin-top:16px">Load Mozok Schedule</button>
+        </div>
+        <div class="log" id="rlog"></div>
+      </div>
+    </div>
+
+    <!-- CALENDAR -->
+    <div class="panel" id="panel-calendar">
+      <div class="card">
+        <h3>📅 Create Calendar Event</h3>
+        <label>Title</label><input id="ct" placeholder="e.g. Mozok prospect call — Bob Smith">
+        <div class="form2" style="margin-top:14px">
+          <div><label>Date</label><input type="date" id="cd"></div>
+          <div><label>Start Time</label><input type="time" id="cs2" value="09:00"></div>
+        </div>
+        <div class="form2" style="margin-top:14px">
+          <div><label>Duration</label><select id="cdur"><option value="15">15 min</option><option value="30" selected>30 min</option><option value="60">1 hour</option></select></div>
+          <div><label>Category</label><select id="ccat"><option>Mozok</option><option>Ramstar</option><option>Personal</option></select></div>
+        </div>
+        <label>Notes</label><textarea id="cn" placeholder="Agenda..."></textarea>
+        <button class="btn blue" onclick="createEvent()"><span id="csp" style="display:none" class="spin"></span>📅 Add to Calendar</button>
+        <div class="log" id="clog"></div>
+      </div>
+    </div>
+
+    <!-- PLAYBOOK -->
+    <div class="panel" id="panel-playbook">
+      <div class="card">
+        <h3>🚀 Mozok Full Playbook — One Click</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:16px">Creates ALL Mozok recurring tasks in Outlook for 8 weeks.</p>
+        <div class="ti"><div style="font-size:16px">📧</div><div class="ti-c"><div class="ti-t">Send Cold Emails — Batch of 10</div><div class="ti-m">Every Tue, Wed, Thu at 8:00am · 8 weeks</div></div></div>
+        <div class="ti"><div style="font-size:16px">📞</div><div class="ti-c"><div class="ti-t">Follow-Up Calls — Warm Leads</div><div class="ti-m">Every Tue, Wed, Thu at 4:00pm · 8 weeks</div></div></div>
+        <div class="ti"><div style="font-size:16px">✍️</div><div class="ti-c"><div class="ti-t">Write & Post LinkedIn Content</div><div class="ti-m">Every Wednesday at 9:00am · 8 weeks</div></div></div>
+        <div class="ti"><div style="font-size:16px">📊</div><div class="ti-c"><div class="ti-t">Weekly Pipeline Review</div><div class="ti-m">Every Monday at 8:30am · 8 weeks</div></div></div>
+        <button class="btn green" style="font-size:14px;padding:12px 24px" onclick="runPlaybook()"><span id="psp" style="display:none" class="spin"></span>🚀 Run Full Playbook</button>
+        <div class="log" id="plog"></div>
+      </div>
+      <div class="card" id="pres" style="display:none"><h3>✅ Tasks Created</h3><div id="plist"></div></div>
+    </div>
+
+  </div>
+</div>
+<script>
+// ── Config ──────────────────────────────────────────────────────────────────
+const PROXY = 'https://corsproxy.io/?';
+
+let listId = '';
+let connected = false;
+let days = [];
+let stasks = [];
+
+const tid = () => document.getElementById('tid').value.trim();
+const cid = () => document.getElementById('cid').value.trim();
+const cs  = () => document.getElementById('cs').value.trim();
+const em  = () => document.getElementById('em').value.trim();
+
+// ── Nav ─────────────────────────────────────────────────────────────────────
+function show(n) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav').forEach(v=>v.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  document.getElementById('nav-'+n).classList.add('active');
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function connect() {
+  slog('alog'); sp('asp',1);
+  log('alog','i','→ Connecting to Microsoft via Render...');
+  try {
+    const r = await callRender('test');
+    if (r.success) {
+      log('alog','s',`✓ Connected as ${r.name} (${r.email})`);
+      const lr = await callRender('getListId');
+      if (lr.listId) { listId=lr.listId; log('alog','s','✓ Task list ready!'); }
+      connected=true;
+      const b=document.getElementById('statusBadge'); b.textContent='● Connected'; b.classList.add('connected');
+    } else { log('alog','e','✗ '+(r.error||'Connection failed')); }
+  } catch(e) { log('alog','e','✗ '+e.message); }
+  sp('asp',0);
+}
+
+async function callRender(action, extra={}) {
+  const r = await fetch(RENDER_API, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({tenantId:tid(),clientId:cid(),clientSecret:cs(),userEmail:em(),action,...extra})
+  });
+  return r.json();
+}
+
+// ── Tasks ────────────────────────────────────────────────────────────────────
+function qt(title, notes) {
+  document.getElementById('tt').value=title;
+  document.getElementById('tn').value=notes;
+  const d=new Date(); d.setDate(d.getDate()+1);
+  document.getElementById('td2').value=d.toISOString().split('T')[0];
+}
+function clearTask() { ['tt','tn','td2'].forEach(id=>document.getElementById(id).value=''); }
+
+async function createTask() {
+  if(!connected){alert('Connect first.');return;}
+  const title=document.getElementById('tt').value.trim();
+  if(!title){alert('Enter a title.');return;}
+  slog('tlog'); sp('tsp',1);
+  log('tlog','i',`→ Creating: "${title}"...`);
+  const due=document.getElementById('td2').value;
+  const r=await callRender('createTask',{taskData:{listId,title,notes:document.getElementById('tn').value,due,priority:document.getElementById('tp').value}});
+  if(r.error) log('tlog','e','✗ '+r.error);
+  else { log('tlog','s','✓ Task created in Outlook!'); stasks.push({title,due}); renderTasks(); }
+  sp('tsp',0);
+}
+
+function renderTasks() {
+  const el=document.getElementById('tlist');
+  if(!stasks.length){el.innerHTML='<div style="color:#555;font-size:13px">No tasks yet.</div>';return;}
+  el.innerHTML=stasks.map(t=>`<div class="ti"><div style="font-size:16px">✅</div><div class="ti-c"><div class="ti-t">${t.title}</div><div class="ti-m">Due: ${t.due||'No date'}</div></div></div>`).join('');
+}
+
+// ── Recurring ─────────────────────────────────────────────────────────────────
+function td(el,day){el.classList.toggle('on');days=el.classList.contains('on')?[...days,day]:days.filter(d=>d!==day);}
+
+function loadMozok(){
+  document.getElementById('rt').value='Send Mozok Cold Emails — Batch of 10';
+  document.getElementById('rtm').value='08:00';
+  document.getElementById('rn').value='Send 10 cold emails via HubSpot. Best: Tue/Wed/Thu 8–9am.';
+  document.querySelectorAll('.rday').forEach(b=>{if(['Tue','Wed','Thu'].includes(b.textContent)){b.classList.add('on');if(!days.includes(b.textContent))days.push(b.textContent);}});
+}
+
+function getDates(ds,weeks){
+  const map={Mon:1,Tue:2,Wed:3,Thu:4,Fri:5};
+  const today=new Date();const dates=[];
+  for(let w=0;w<weeks;w++) for(const day of ds){
+    const t=new Date(today);const diff=(map[day]-today.getDay()+7)%7+(w*7);
+    t.setDate(today.getDate()+(diff===0&&w===0?7:diff));dates.push(new Date(t));
+  }
+  return dates.sort((a,b)=>a-b);
+}
+
+async function createRecurring(){
+  if(!connected){alert('Connect first.');return;}
+  if(!days.length){alert('Select at least one day.');return;}
+  const title=document.getElementById('rt').value.trim();
+  if(!title){alert('Enter a title.');return;}
+  const weeks=parseInt(document.getElementById('rw').value);
+  const time=document.getElementById('rtm').value;
+  const notes=document.getElementById('rn').value;
+  const dates=getDates(days,weeks);
+  slog('rlog');sp('rsp',1);
+  log('rlog','i',`→ Creating ${dates.length} tasks...`);
+  let count=0;
+  for(const d of dates){
+    const ds=d.toISOString().split('T')[0];
+    const r=await callRender('createTask',{taskData:{listId,title,notes,due:ds,priority:'normal'}});
+    if(r.error){log('rlog','e','✗ '+r.error);break;}
+    count++;if(count<=3)log('rlog','s',`✓ ${d.toDateString()}`);
+  }
+  if(dates.length>3)log('rlog','i',`  + ${dates.length-3} more`);
+  log('rlog','s',`✓ Done! ${count} tasks in Outlook.`);
+  sp('rsp',0);
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+async function createEvent(){
+  if(!connected){alert('Connect first.');return;}
+  const title=document.getElementById('ct').value.trim();
+  const date=document.getElementById('cd').value;
+  if(!title||!date){alert('Fill in title and date.');return;}
+  const start=new Date(`${date}T${document.getElementById('cs2').value}:00`);
+  const end=new Date(start.getTime()+parseInt(document.getElementById('cdur').value)*60000);
+  const cat=document.getElementById('ccat').value;
+  slog('clog');sp('csp',1);
+  log('clog','i',`→ Creating event: "${title}"...`);
+  const r=await graph(`/users/${em()}/events`,'POST',{
+    subject:`[${cat}] ${title}`,
+    body:{contentType:'text',content:document.getElementById('cn').value},
+    start:{dateTime:start.toISOString().replace('Z',''),timeZone:'America/Toronto'},
+    end:{dateTime:end.toISOString().replace('Z',''),timeZone:'America/Toronto'},
+    categories:[cat]
+  });
+  if(r.error)log('clog','e','✗ '+r.error.message);
+  else log('clog','s','✓ Event added to Outlook calendar!');
+  sp('csp',0);
+}
+
+// ── Playbook ──────────────────────────────────────────────────────────────────
+async function runPlaybook(){
+  if(!connected){alert('Connect first.');return;}
+  const items=[
+    {title:'Send Mozok Cold Emails — Batch of 10',days:['Tue','Wed','Thu'],time:'08:00',notes:'Send 10 cold emails via HubSpot.'},
+    {title:'Follow-Up Calls — Warm Mozok Leads',days:['Tue','Wed','Thu'],time:'16:00',notes:'Call leads who opened emails. Best: 4–5:30pm.'},
+    {title:'Write & Post Mozok LinkedIn Content',days:['Wed'],time:'09:00',notes:'Write one text-only LinkedIn post.'},
+    {title:'Mozok Weekly Pipeline Review',days:['Mon'],time:'08:30',notes:'Check HubSpot. Count opens, replies, booked calls.'}
+  ];
+  slog('plog');sp('psp',1);
+  const created={};
+  for(const item of items){
+    log('plog','i',`→ "${item.title}"...`);
+    const dates=getDates(item.days,8);let c=0;
+    for(const d of dates){
+      const ds=d.toISOString().split('T')[0];
+      const r=await callRender('createTask',{taskData:{listId,title:item.title,notes:item.notes,due:ds,priority:'normal'}});
+      if(!r.error)c++;
+    }
+    created[item.title]=c;log('plog','s',`✓ ${c} tasks`);
+  }
+  const total=Object.values(created).reduce((a,b)=>a+b,0);
+  log('plog','s',`\n✅ DONE! ${total} tasks added to Outlook!`);
+  document.getElementById('pres').style.display='block';
+  document.getElementById('plist').innerHTML=Object.entries(created).map(([t,c])=>`<div class="ti"><div style="font-size:16px">✅</div><div class="ti-c"><div class="ti-t">${t}</div><div class="ti-m">${c} tasks created</div></div></div>`).join('');
+  sp('psp',0);
+}
+
+// ── Utils ─────────────────────────────────────────────────────────────────────
+function slog(id){const e=document.getElementById(id);e.style.display='block';e.innerHTML='';}
+function log(id,t,m){const e=document.getElementById(id);const d=document.createElement('div');d.className={s:'ls',e:'le',i:'li'}[t];d.textContent=m;e.appendChild(d);e.scrollTop=e.scrollHeight;}
+function sp(id,on){document.getElementById(id).style.display=on?'inline-block':'none';}
+
+const td2=new Date();td2.setDate(td2.getDate()+1);
+document.getElementById('td2').value=td2.toISOString().split('T')[0];
+document.getElementById('cd').value=new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>
