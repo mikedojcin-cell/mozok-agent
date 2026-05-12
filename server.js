@@ -24,12 +24,12 @@ async function getToken(tenantId, clientId, clientSecret) {
   });
 }
 
-async function graphCall(token, method, path, body) {
+async function graphCall(token, method, urlPath, body) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
     const req = https.request({
       hostname: 'graph.microsoft.com',
-      path,
+      path: urlPath,
       method,
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -50,8 +50,60 @@ async function graphCall(token, method, path, body) {
   });
 }
 
+async function hubspotRequest(method, urlPath, body) {
+  const hsKey = process.env.HUBSPOT_KEY;
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const req = https.request({
+      hostname: 'api.hubapi.com',
+      path: urlPath,
+      method,
+      headers: {
+        'Authorization': `Bearer ${hsKey}`,
+        'Content-Type': 'application/json',
+        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
+      }
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
+
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
+
+  // HubSpot actions — no Microsoft token needed
+  if (action === 'getContacts') {
+    const { status } = req.body;
+    try {
+      const result = await hubspotRequest('POST', '/crm/v3/objects/contacts/search', {
+        filterGroups: [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: status }] }],
+        limit: 100,
+        properties: ['firstname', 'lastname', 'email', 'company', 'hs_lead_status', 'phone'],
+        sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
+      });
+      return res.json(result);
+    } catch(e) {
+      return res.json({ error: e.message });
+    }
+  }
+
+  if (action === 'updateContact') {
+    const { contactId, props } = req.body;
+    try {
+      await hubspotRequest('PATCH', `/crm/v3/objects/contacts/${contactId}`, { properties: props });
+      return res.json({ success: true });
+    } catch(e) {
+      return res.json({ error: e.message });
+    }
+  }
+
+  // Microsoft actions — need token
   try {
     const tokenRes = await getToken(tenantId, clientId, clientSecret);
     if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
@@ -111,48 +163,7 @@ app.post('/api/graph', async (req, res) => {
       if (r.status === 202) return res.json({ success: true, status: 202 });
       return res.json({ error: r.data?.error?.message || `Send failed (${r.status})` });
     }
-if (action === 'getContacts') {
-      const { status } = req.body;
-      const hsKey = process.env.HUBSPOT_KEY;
-      const r = await new Promise((resolve, reject) => {
-        const body = JSON.stringify({
-          filterGroups: [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: status }] }],
-          limit: 100,
-          properties: ['firstname','lastname','email','company','hs_lead_status','phone'],
-          sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
-        });
-        const req2 = https.request({
-          hostname: 'api.hubapi.com',
-          path: '/crm/v3/objects/contacts/search',
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${hsKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-        }, res2 => {
-          let d = ''; res2.on('data', c => d += c);
-          res2.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
-        });
-        req2.on('error', reject); req2.write(body); req2.end();
-      });
-      return res.json(r);
-    }
 
-    if (action === 'updateContact') {
-      const { contactId, props } = req.body;
-      const hsKey = process.env.HUBSPOT_KEY;
-      const body = JSON.stringify({ properties: props });
-      const r = await new Promise((resolve, reject) => {
-        const req2 = https.request({
-          hostname: 'api.hubapi.com',
-          path: `/crm/v3/objects/contacts/${contactId}`,
-          method: 'PATCH',
-          headers: { 'Authorization': `Bearer ${hsKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
-        }, res2 => {
-          let d = ''; res2.on('data', c => d += c);
-          res2.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
-        });
-        req2.on('error', reject); req2.write(body); req2.end();
-      });
-      return res.json({ success: true });
-    }
     return res.json({ error: 'Unknown action' });
   } catch (e) {
     return res.json({ error: e.message });
