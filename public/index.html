@@ -162,7 +162,39 @@
         </div>
       </div>
     </div>
-
+<!-- EMAIL OUTREACH -->
+    <div class="panel" id="panel-email">
+      <div class="card">
+        <h3>📧 Email Queue</h3>
+        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+          <select id="emailFilter" style="width:auto;padding:7px 12px">
+            <option value="NEW">🆕 New Contacts (Email 1)</option>
+            <option value="EMAIL_1_SENT">📨 Follow-Up Due (Email 2)</option>
+            <option value="EMAIL_2_SENT">📨 Final Follow-Up (Email 3)</option>
+          </select>
+          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="loadContacts()">🔄 Refresh</button>
+          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=true)">☑ All</button>
+          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=false)">☐ None</button>
+        </div>
+        <div id="contactsLoading" style="color:#555;font-size:13px;padding:20px 0">Click Refresh to load contacts.</div>
+        <div id="contactsTable" style="display:none;overflow-x:auto">
+          <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr>
+              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d;width:36px"><input type="checkbox" onchange="document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=this.checked)"></th>
+              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d">Name</th>
+              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d">Company</th>
+              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d">Email</th>
+            </tr></thead>
+            <tbody id="contactRows"></tbody>
+          </table>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px">
+          <button class="btn green" onclick="sendEmails()"><span id="esp" style="display:none" class="spin"></span>📤 Send to Selected</button>
+          <span id="selectedCount" style="color:#666;font-size:13px"></span>
+        </div>
+        <div class="log" id="elog"></div>
+      </div>
+    </div>
     <!-- TASKS -->
     <div class="panel" id="panel-tasks">
       <div class="card">
