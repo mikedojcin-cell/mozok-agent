@@ -84,8 +84,6 @@
     <div class="nav" onclick="show('recurring')" id="nav-recurring">🔁 Recurring</div>
     <div class="nav" onclick="show('calendar')" id="nav-calendar">📅 Calendar</div>
     <div class="nav" onclick="show('playbook')" id="nav-playbook">🚀 Mozok Playbook</div>
-<div class="sec" style="margin-top:16px">Outreach</div>
-    <div class="nav" onclick="show('email')" id="nav-email">📧 Send Emails</div>
   </div>
   <div class="main">
 
@@ -96,7 +94,7 @@
         <p style="font-size:13px;color:#888;margin-bottom:4px;">Credentials are pre-filled. Just click Connect.</p>
         <label>Tenant ID</label><input id="tid" value="26b2d778-d390-4c96-9c8b-96cf1bf43c5d">
         <label>Client ID</label><input id="cid" value="c141d1d2-14a9-4a2a-b965-aca133a394f4">
-        <label>Client Secret</label><input type="password" id="cs" value="UkD8Q~wwW5hbuMeMaISWPmw2V53K2hVZqCD7fcB5">
+        <label>Client Secret</label><input type="password" id="cs" value="kcP8Q~bQ1w49F4JiVUE3HJCiOYWqiw0FFJMp0ayl">
         <label>Email</label><input id="em" value="mike@mozok.co">
         <button class="btn blue" onclick="connect()"><span id="asp" style="display:none" class="spin"></span>🔌 Connect</button>
         <div class="log" id="alog"></div>
@@ -162,39 +160,7 @@
         </div>
       </div>
     </div>
-<!-- EMAIL OUTREACH -->
-    <div class="panel" id="panel-email">
-      <div class="card">
-        <h3>📧 Email Queue</h3>
-        <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
-          <select id="emailFilter" style="width:auto;padding:7px 12px">
-            <option value="NEW">🆕 New Contacts (Email 1)</option>
-            <option value="EMAIL_1_SENT">📨 Follow-Up Due (Email 2)</option>
-            <option value="EMAIL_2_SENT">📨 Final Follow-Up (Email 3)</option>
-          </select>
-          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="loadContacts()">🔄 Refresh</button>
-          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=true)">☑ All</button>
-          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=false)">☐ None</button>
-        </div>
-        <div id="contactsLoading" style="color:#555;font-size:13px;padding:20px 0">Click Refresh to load contacts.</div>
-        <div id="contactsTable" style="display:none;overflow-x:auto">
-          <table style="width:100%;border-collapse:collapse;font-size:13px">
-            <thead><tr>
-              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d;width:36px"><input type="checkbox" onchange="document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=this.checked)"></th>
-              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d">Name</th>
-              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d">Company</th>
-              <th style="text-align:left;padding:8px 12px;color:#666;font-size:11px;border-bottom:1px solid #2a2f3d">Email</th>
-            </tr></thead>
-            <tbody id="contactRows"></tbody>
-          </table>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;margin-top:16px">
-          <button class="btn green" onclick="sendEmails()"><span id="esp" style="display:none" class="spin"></span>📤 Send to Selected</button>
-          <span id="selectedCount" style="color:#666;font-size:13px"></span>
-        </div>
-        <div class="log" id="elog"></div>
-      </div>
-    </div>
+
     <!-- TASKS -->
     <div class="panel" id="panel-tasks">
       <div class="card">
@@ -650,93 +616,7 @@ async function runPlaybook(){
   document.getElementById('plist').innerHTML=Object.entries(created).map(([t,c])=>`<div class="ti"><div style="font-size:16px">✅</div><div class="ti-c"><div class="ti-t">${t}</div><div class="ti-m">${c} tasks created</div></div></div>`).join('');
   sp('psp',0);
 }
-const RENDER_API = 'https://mozok-agent.onrender.com/api/graph';
- // ── HubSpot ──────────────────────────────────────────────────────────────────
-const HUBSPOT_KEY = 'CiRuYTMtN2E3ZC05ZmI4LTQ0N2YtYjNjNi1iYjQwNTVjYjNmOTYQ2djIowEYhfHDKioZAAXmkYJEnTw87Jio63bEmZnloTjpyzpyZEoDbmEz';
-let allContacts = [];
 
-async function hsPost(path, body) {
-  const r = await fetch(`https://api.hubapi.com${path}`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return r.json();
-}
-
-async function hsPatch(id, props) {
-  await fetch(`https://api.hubapi.com/crm/v3/objects/contacts/${id}`, {
-    method: 'PATCH',
-    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ properties: props })
-  });
-}
-
-async function loadContacts() {
-  const filter = document.getElementById('emailFilter').value;
-  document.getElementById('contactsLoading').textContent = 'Loading...';
-  document.getElementById('contactsLoading').style.display = 'block';
-  document.getElementById('contactsTable').style.display = 'none';
-  const res = await hsPost('/crm/v3/objects/contacts/search', {
-    filterGroups: [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: filter }] }],
-    limit: 100,
-    properties: ['firstname','lastname','email','company','hs_lead_status','phone'],
-    sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
-  });
-  allContacts = res.results || [];
-  if (!allContacts.length) {
-    document.getElementById('contactsLoading').textContent = 'No contacts ready for this stage.';
-    return;
-  }
-  document.getElementById('contactRows').innerHTML = allContacts.map((c,i) => {
-    const p = c.properties;
-    return `<tr><td style="padding:10px 12px;border-bottom:1px solid #1a1f2e"><input type="checkbox" class="contact-cb" data-idx="${i}"></td><td style="padding:10px 12px;border-bottom:1px solid #1a1f2e">${p.firstname||''} ${p.lastname||''}</td><td style="padding:10px 12px;border-bottom:1px solid #1a1f2e;color:#888">${p.company||''}</td><td style="padding:10px 12px;border-bottom:1px solid #1a1f2e;color:#4fa3e0">${p.email||''}</td></tr>`;
-  }).join('');
-  document.getElementById('contactsLoading').style.display = 'none';
-  document.getElementById('contactsTable').style.display = 'block';
-  document.getElementById('selectedCount').textContent = `${allContacts.length} contacts loaded`;
-}
-
-async function sendEmails() {
-  if (!connected) { alert('Connect first.'); return; }
-  const selected = [...document.querySelectorAll('.contact-cb:checked')].map(cb => allContacts[parseInt(cb.dataset.idx)]);
-  if (!selected.length) { alert('Select at least one contact.'); return; }
-  const filter = document.getElementById('emailFilter').value;
-  slog('elog'); sp('esp',1);
-  log('elog','i',`→ Sending to ${selected.length} contacts...`);
-  let sent = 0, failed = 0;
-  for (const contact of selected) {
-    const p = contact.properties;
-    const firstName = p.firstname || 'there';
-    const company = p.company || 'your company';
-    const phone = (p.phone||'').includes('226')||(p.phone||'').includes('519') ? '226-214-1660' : '248-800-3405';
-    let subject, body, newStatus, dateField;
-    if (filter === 'NEW') {
-      subject = `Social media for ${company}`;
-      body = `Hi ${firstName},\n\nMost business owners I talk to know they should be more active on social media — they just never get around to it.\n\nBetween running the operation and everything else on your plate, it keeps getting pushed to tomorrow.\n\nThat's exactly what Mozok solves. We handle your content, scheduling, and posting across LinkedIn, Facebook, and Instagram every month. You approve by email before anything goes live. That's it.\n\nNo logins. No long-term contracts. Plans start at $497/month.\n\nWorth a 15-minute call?\n\nMike\nmozok.co | ${phone}`;
-      newStatus = 'EMAIL_1_SENT'; dateField = 'email1_sent_date';
-    } else if (filter === 'EMAIL_1_SENT') {
-      subject = `Re: Social media for ${company}`;
-      body = `Hi ${firstName},\n\nJust circling back on my note from earlier this week.\n\nIf social media has been on your to-do list but keeps getting pushed — that's exactly who we built Mozok for.\n\nHappy to show you how it works in 15 minutes.\n\nMike\nmozok.co | ${phone}`;
-      newStatus = 'EMAIL_2_SENT'; dateField = 'email2_sent_date';
-    } else {
-      subject = `Last note — ${company}`;
-      body = `Hi ${firstName},\n\nI'll keep this short — last note from me.\n\nIf the timing isn't right, no worries at all. If social media ever becomes a priority, we're at mozok.co.\n\nMike\n${phone}`;
-      newStatus = 'EMAIL_3_SENT'; dateField = 'email3_sent_date';
-    }
-    try {
-      const r = await callRender('sendEmail', { to: p.email, subject, body });
-      if (r.success || r.status === 202) {
-        await hsPatch(contact.id, { hs_lead_status: newStatus, [dateField]: new Date().toISOString().split('T')[0] });
-        sent++; log('elog','s',`✓ ${firstName} ${p.lastname||''} <${p.email}>`);
-      } else { failed++; log('elog','e',`✗ ${p.email}: ${r.error||'failed'}`); }
-    } catch(e) { failed++; log('elog','e',`✗ ${p.email}: ${e.message}`); }
-    await new Promise(r=>setTimeout(r,300));
-  }
-  log('elog','i',`\n📊 Done: ${sent} sent, ${failed} failed`);
-  sp('esp',0);
-  if (sent > 0) setTimeout(loadContacts, 1000);
-}
 // ── Utils ─────────────────────────────────────────────────────────────────────
 function slog(id){const e=document.getElementById(id);e.style.display='block';e.innerHTML='';}
 function log(id,t,m){const e=document.getElementById(id);const d=document.createElement('div');d.className={s:'ls',e:'le',i:'li'}[t];d.textContent=m;e.appendChild(d);e.scrollTop=e.scrollHeight;}
