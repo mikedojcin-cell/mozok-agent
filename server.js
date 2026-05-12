@@ -1,9 +1,24 @@
 const express = require('express');
 const https = require('https');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+
+const CONTACTS_FILE = path.join(__dirname, 'contacts.json');
+
+function loadContacts() {
+  try {
+    return JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8'));
+  } catch(e) {
+    return [];
+  }
+}
+
+function saveContacts(contacts) {
+  fs.writeFileSync(CONTACTS_FILE, JSON.stringify(contacts, null, 2));
+}
 
 async function getToken(tenantId, clientId, clientSecret) {
   return new Promise((resolve, reject) => {
@@ -50,60 +65,37 @@ async function graphCall(token, method, urlPath, body) {
   });
 }
 
-async function hubspotRequest(method, urlPath, body) {
-  const hsKey = process.env.HUBSPOT_KEY;
-  return new Promise((resolve, reject) => {
-    const data = body ? JSON.stringify(body) : null;
-    const req = https.request({
-      hostname: 'api.hubapi.com',
-      path: urlPath,
-      method,
-      headers: {
-        'Authorization': `Bearer ${hsKey}`,
-        'Content-Type': 'application/json',
-        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
-      }
-    }, res => {
-      let d = '';
-      res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
-    });
-    req.on('error', reject);
-    if (data) req.write(data);
-    req.end();
-  });
-}
-
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
 
-  // HubSpot actions — no Microsoft token needed
+  // Contact actions — no Microsoft token needed
   if (action === 'getContacts') {
     const { status } = req.body;
-    try {
-      const result = await hubspotRequest('POST', '/crm/v3/objects/contacts/search', {
-        filterGroups: [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: status }] }],
-        limit: 100,
-        properties: ['firstname', 'lastname', 'email', 'company', 'hs_lead_status', 'phone'],
-        sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
-      });
-      return res.json(result);
-    } catch(e) {
-      return res.json({ error: e.message });
-    }
+    const contacts = loadContacts().filter(c => c.status === status);
+    return res.json({ results: contacts, total: contacts.length });
   }
 
   if (action === 'updateContact') {
     const { contactId, props } = req.body;
-    try {
-      await hubspotRequest('PATCH', `/crm/v3/objects/contacts/${contactId}`, { properties: props });
-      return res.json({ success: true });
-    } catch(e) {
-      return res.json({ error: e.message });
+    const contacts = loadContacts();
+    const idx = contacts.findIndex(c => c.id === contactId);
+    if (idx >= 0) {
+      contacts[idx] = { ...contacts[idx], ...props };
+      saveContacts(contacts);
     }
+    return res.json({ success: true });
   }
 
-  // Microsoft actions — need token
+  if (action === 'addContacts') {
+    const { newContacts } = req.body;
+    const contacts = loadContacts();
+    const existing = new Set(contacts.map(c => c.email));
+    const toAdd = newContacts.filter(c => !existing.has(c.email));
+    saveContacts([...contacts, ...toAdd]);
+    return res.json({ success: true, added: toAdd.length });
+  }
+
+  // Microsoft actions
   try {
     const tokenRes = await getToken(tenantId, clientId, clientSecret);
     if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
