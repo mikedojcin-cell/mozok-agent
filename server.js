@@ -1,56 +1,124 @@
 const express = require('express');
-const fetch = require('node-fetch');
-const app = express();
+const https = require('https');
 const path = require('path');
-app.use(express.static('public'));
+const app = express();
 app.use(express.json());
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
-  if (req.method === 'OPTIONS') return res.sendStatus(200);
-  next();
-});
+app.use(express.static(path.join(__dirname, 'public')));
+
+async function getToken(tenantId, clientId, clientSecret) {
+  return new Promise((resolve, reject) => {
+    const body = `grant_type=client_credentials&client_id=${clientId}&client_secret=${encodeURIComponent(clientSecret)}&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default`;
+    const req = https.request({
+      hostname: 'login.microsoftonline.com',
+      path: `/${tenantId}/oauth2/v2.0/token`,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': body.length }
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+async function graphCall(token, method, path, body) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const req = https.request({
+      hostname: 'graph.microsoft.com',
+      path,
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
+      }
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, data: d ? JSON.parse(d) : {} }); }
+        catch(e) { resolve({ status: res.statusCode, data: d }); }
+      });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
+}
 
 app.post('/api/graph', async (req, res) => {
-  const { action, tenantId, clientId, clientSecret, userEmail, taskData, eventData } = req.body;
+  const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
   try {
-    const tokenRes = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret, scope: 'https://graph.microsoft.com/.default' })
-    });
-    const tokenData = await tokenRes.json();
-    if (!tokenData.access_token) return res.status(401).json({ error: tokenData.error_description || 'Auth failed' });
-    const token = tokenData.access_token;
-    const gh = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const tokenRes = await getToken(tenantId, clientId, clientSecret);
+    if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
+    const token = tokenRes.access_token;
 
     if (action === 'test') {
-      const r = await fetch(`https://graph.microsoft.com/v1.0/users/${userEmail}`, { headers: gh });
-      const d = await r.json();
-      return d.error ? res.status(400).json({ error: d.error.message }) : res.json({ success: true, name: d.displayName, email: d.mail });
+      const r = await graphCall(token, 'GET', `/v1.0/users/${userEmail}`);
+      if (r.status === 200) return res.json({ success: true, name: r.data.displayName, email: r.data.mail || userEmail });
+      return res.json({ error: r.data?.error?.message || 'Auth failed' });
     }
+
     if (action === 'getListId') {
-      const r = await fetch(`https://graph.microsoft.com/v1.0/users/${userEmail}/todo/lists`, { headers: gh });
-      const d = await r.json();
-      const def = d.value?.find(l => l.wellknownListName === 'defaultList') || d.value?.[0];
-      return res.json({ listId: def?.id });
+      const r = await graphCall(token, 'GET', `/v1.0/users/${userEmail}/todo/lists`);
+      const list = r.data?.value?.find(l => l.displayName === 'Tasks') || r.data?.value?.[0];
+      return res.json({ listId: list?.id || '' });
     }
+
     if (action === 'createTask') {
-      const { listId, title, notes, due, priority } = taskData;
-      const body = { title, importance: priority || 'normal', body: { contentType: 'text', content: notes || '' } };
-      if (due) body.dueDateTime = { dateTime: due + 'T09:00:00', timeZone: 'America/Toronto' };
-      const r = await fetch(`https://graph.microsoft.com/v1.0/users/${userEmail}/todo/lists/${listId}/tasks`, { method: 'POST', headers: gh, body: JSON.stringify(body) });
-      const d = await r.json();
-      return d.error ? res.status(400).json({ error: d.error.message }) : res.json({ success: true, id: d.id });
+      const { taskData } = req.body;
+      const body = {
+        title: taskData.title,
+        importance: taskData.priority === 'high' ? 'high' : taskData.priority === 'low' ? 'low' : 'normal',
+        body: { content: taskData.notes || '', contentType: 'text' },
+        ...(taskData.due ? { dueDateTime: { dateTime: `${taskData.due}T09:00:00`, timeZone: 'America/Toronto' } } : {})
+      };
+      const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/todo/lists/${taskData.listId}/tasks`, body);
+      if (r.status === 201) return res.json({ success: true, id: r.data.id });
+      return res.json({ error: r.data?.error?.message || 'Task creation failed' });
     }
+
     if (action === 'createEvent') {
-      const { title, start, end, notes, category } = eventData;
-      const r = await fetch(`https://graph.microsoft.com/v1.0/users/${userEmail}/events`, { method: 'POST', headers: gh, body: JSON.stringify({ subject: title, body: { contentType: 'text', content: notes || '' }, start: { dateTime: start, timeZone: 'America/Toronto' }, end: { dateTime: end, timeZone: 'America/Toronto' }, categories: [category] }) });
-      const d = await r.json();
-      return d.error ? res.status(400).json({ error: d.error.message }) : res.json({ success: true });
+      const { eventData } = req.body;
+      const body = {
+        subject: eventData.subject,
+        body: { contentType: 'text', content: eventData.body || '' },
+        start: { dateTime: eventData.start, timeZone: 'America/Toronto' },
+        end: { dateTime: eventData.end, timeZone: 'America/Toronto' },
+        categories: [eventData.category]
+      };
+      const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/events`, body);
+      if (r.status === 201) return res.json({ success: true });
+      return res.json({ error: r.data?.error?.message || 'Event creation failed' });
     }
-  } catch(e) { res.status(500).json({ error: e.message }); }
+
+    if (action === 'sendEmail') {
+      const { to, subject, body: emailBody } = req.body;
+      const msgBody = {
+        message: {
+          subject,
+          body: { contentType: 'text', content: emailBody },
+          toRecipients: [{ emailAddress: { address: to } }],
+          from: { emailAddress: { address: userEmail } }
+        },
+        saveToSentItems: true
+      };
+      const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
+      if (r.status === 202) return res.json({ success: true, status: 202 });
+      return res.json({ error: r.data?.error?.message || `Send failed (${r.status})` });
+    }
+
+    return res.json({ error: 'Unknown action' });
+  } catch (e) {
+    return res.json({ error: e.message });
+  }
 });
 
-app.get('/', (req, res) => res.send('Mozok Agent API running'));
-app.listen(process.env.PORT || 3000, () => console.log('Running'));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Mozok Agent running on port ${PORT}`));
