@@ -111,7 +111,48 @@ app.post('/api/graph', async (req, res) => {
       if (r.status === 202) return res.json({ success: true, status: 202 });
       return res.json({ error: r.data?.error?.message || `Send failed (${r.status})` });
     }
+if (action === 'getContacts') {
+      const { status } = req.body;
+      const hsKey = process.env.HUBSPOT_KEY;
+      const r = await new Promise((resolve, reject) => {
+        const body = JSON.stringify({
+          filterGroups: [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: status }] }],
+          limit: 100,
+          properties: ['firstname','lastname','email','company','hs_lead_status','phone'],
+          sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
+        });
+        const req2 = https.request({
+          hostname: 'api.hubapi.com',
+          path: '/crm/v3/objects/contacts/search',
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${hsKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        }, res2 => {
+          let d = ''; res2.on('data', c => d += c);
+          res2.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
+        });
+        req2.on('error', reject); req2.write(body); req2.end();
+      });
+      return res.json(r);
+    }
 
+    if (action === 'updateContact') {
+      const { contactId, props } = req.body;
+      const hsKey = process.env.HUBSPOT_KEY;
+      const body = JSON.stringify({ properties: props });
+      const r = await new Promise((resolve, reject) => {
+        const req2 = https.request({
+          hostname: 'api.hubapi.com',
+          path: `/crm/v3/objects/contacts/${contactId}`,
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${hsKey}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) }
+        }, res2 => {
+          let d = ''; res2.on('data', c => d += c);
+          res2.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
+        });
+        req2.on('error', reject); req2.write(body); req2.end();
+      });
+      return res.json({ success: true });
+    }
     return res.json({ error: 'Unknown action' });
   } catch (e) {
     return res.json({ error: e.message });
