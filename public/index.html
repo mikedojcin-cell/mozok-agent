@@ -256,7 +256,6 @@
 </div>
 <script>
 const RENDER_API = 'https://mozok-agent.onrender.com/api/graph';
-const HUBSPOT_KEY = 'CiRuYTMtN2E3ZC05ZmI4LTQ0N2YtYjNjNi1iYjQwNTVjYjNmOTYQ2djIowEYhfHDKioZAAXmkYJEnTw87Jio63bEmZnloTjpyzpyZEoDbmEz';
 
 let listId = '';
 let connected = false;
@@ -304,30 +303,13 @@ async function callRender(action, extra={}) {
   return r.json();
 }
 
-// ── HubSpot ──────────────────────────────────────────────────────────────────
-async function hsGet(path) {
-  const r = await fetch(`https://api.hubapi.com${path}`, {
-    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}` }
-  });
-  return r.json();
+// ── HubSpot (via Render) ─────────────────────────────────────────────────────
+async function hsPost(status) {
+  return callRender('getContacts', { status });
 }
 
-async function hsPost(path, body) {
-  const r = await fetch(`https://api.hubapi.com${path}`, {
-    method: 'POST',
-    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return r.json();
-}
-
-async function hsPatch(path, body) {
-  const r = await fetch(`https://api.hubapi.com${path}`, {
-    method: 'PATCH',
-    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
-  });
-  return r.json();
+async function hsPatch(id, props) {
+  return callRender('updateContact', { contactId: id, props });
 }
 
 // ── Load Contacts ─────────────────────────────────────────────────────────────
@@ -338,26 +320,7 @@ async function loadContacts() {
   document.getElementById('contactsTable').style.display = 'none';
 
   try {
-    // Load stats
-    const statuses = ['NEW','EMAIL_1_SENT','EMAIL_2_SENT','EMAIL_3_SENT'];
-    for (const s of statuses) {
-      const res = await hsPost('/crm/v3/objects/contacts/search', {
-        filterGroups: [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: s }] }],
-        limit: 1, properties: ['email']
-      });
-      const map = { NEW:'stat-new', EMAIL_1_SENT:'stat-e1', EMAIL_2_SENT:'stat-e2', EMAIL_3_SENT:'stat-e3' };
-      document.getElementById(map[s]).textContent = res.total || 0;
-    }
-
-    // Load contacts for selected filter — check follow-up due dates
-    let filterGroups = [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: filter }] }];
-    
-    const res = await hsPost('/crm/v3/objects/contacts/search', {
-      filterGroups,
-      limit: 100,
-      properties: ['firstname','lastname','email','company','hs_lead_status','email1_sent_date','email2_sent_date'],
-      sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
-    });
+    const res = await hsPost(filter);
 
     allContacts = (res.results || []).filter(c => {
       const p = c.properties;
@@ -470,7 +433,7 @@ async function sendEmails() {
 
       if (r.success || r.status === 202) {
         // Update HubSpot status
-        await hsPatch(`/crm/v3/objects/contacts/${contact.id}`, {
+        await hsPatch(contact.id, {
           properties: {
             hs_lead_status: newStatus,
             [dateField]: new Date().toISOString().split('T')[0]
