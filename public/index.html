@@ -29,6 +29,7 @@
   .btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 6px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 16px; }
   .blue { background: #0078d4; color: #fff; } .blue:hover { background: #106ebe; }
   .green { background: #107c10; color: #fff; } .green:hover { background: #0e6b0e; }
+  .orange { background: #ca5010; color: #fff; } .orange:hover { background: #b04000; }
   .grey { background: #2a2f3d; color: #ccc; }
   .log { background: #0a0d14; border: 1px solid #1e2335; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 14px; display: none; }
   .ls { color: #6ccb5f; } .le { color: #e74c3c; } .li { color: #4fa3e0; }
@@ -47,22 +48,44 @@
   .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: sp .7s linear infinite; }
   @keyframes sp { to { transform: rotate(360deg); } }
   .info { background: #0d2040; border: 1px solid #0078d4; color: #4fa3e0; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+  .warn { background: #2b1800; border: 1px solid #ca5010; color: #f7ba1e; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+  /* Email section styles */
+  .contact-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .contact-table th { text-align: left; padding: 8px 12px; color: #666; font-weight: 600; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #2a2f3d; }
+  .contact-table td { padding: 10px 12px; border-bottom: 1px solid #1a1f2e; vertical-align: middle; }
+  .contact-table tr:hover td { background: #1a1f2e; }
+  .contact-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .badge-new { background: #0d2040; color: #4fa3e0; }
+  .badge-e1 { background: #1a2b00; color: #6ccb5f; }
+  .badge-e2 { background: #2b1800; color: #f7ba1e; }
+  .badge-e3 { background: #2b0000; color: #e74c3c; }
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+  .stat-box { background: #1a1f2e; border: 1px solid #2a2f3d; border-radius: 8px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 700; color: #4fa3e0; }
+  .stat-lbl { font-size: 11px; color: #666; margin-top: 4px; }
+  .select-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  .select-bar select { width: auto; }
 </style>
 </head>
 <body>
 <div class="header">
-  <div><div class="logo">⚡ Mozok Outlook Agent</div><div class="sub">Microsoft 365 Task & Calendar Automation</div></div>
+  <div><div class="logo">⚡ Mozok Outlook Agent</div><div class="sub">Microsoft 365 Task & Email Automation</div></div>
   <div id="statusBadge">● Not Connected</div>
 </div>
 <div class="container">
   <div class="sidebar">
     <div class="sec">Setup</div>
     <div class="nav active" onclick="show('auth')" id="nav-auth">🔐 Connect Outlook</div>
-    <div class="sec" style="margin-top:16px">Actions</div>
+    <div class="sec" style="margin-top:16px">Outreach</div>
+    <div class="nav" onclick="show('email')" id="nav-email">📧 Send Emails</div>
+    <div class="sec" style="margin-top:16px">Tasks</div>
     <div class="nav" onclick="show('tasks')" id="nav-tasks">✅ Create Tasks</div>
     <div class="nav" onclick="show('recurring')" id="nav-recurring">🔁 Recurring</div>
     <div class="nav" onclick="show('calendar')" id="nav-calendar">📅 Calendar</div>
     <div class="nav" onclick="show('playbook')" id="nav-playbook">🚀 Mozok Playbook</div>
+<div class="sec" style="margin-top:16px">Outreach</div>
+    <div class="nav" onclick="show('email')" id="nav-email">📧 Send Emails</div>
   </div>
   <div class="main">
 
@@ -77,6 +100,66 @@
         <label>Email</label><input id="em" value="mike@mozok.co">
         <button class="btn blue" onclick="connect()"><span id="asp" style="display:none" class="spin"></span>🔌 Connect</button>
         <div class="log" id="alog"></div>
+      </div>
+    </div>
+
+    <!-- EMAIL OUTREACH -->
+    <div class="panel" id="panel-email">
+      <div class="stats-row" id="emailStats">
+        <div class="stat-box"><div class="stat-num" id="stat-new">-</div><div class="stat-lbl">Ready to Send</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-e1">-</div><div class="stat-lbl">Email 1 Sent</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-e2">-</div><div class="stat-lbl">Email 2 Sent</div></div>
+        <div class="stat-box"><div class="stat-num" id="stat-e3">-</div><div class="stat-lbl">Email 3 Sent</div></div>
+      </div>
+
+      <div class="card">
+        <h3>📧 Email Queue</h3>
+        <div class="select-bar">
+          <select id="emailFilter" onchange="filterContacts()">
+            <option value="NEW">🆕 New Contacts (Email 1)</option>
+            <option value="EMAIL_1_SENT">📨 Follow-Up Due (Email 2)</option>
+            <option value="EMAIL_2_SENT">📨 Final Follow-Up (Email 3)</option>
+          </select>
+          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="loadContacts()">🔄 Refresh</button>
+          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="selectAll()">☑ Select All</button>
+          <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="selectNone()">☐ Deselect All</button>
+        </div>
+
+        <div id="contactsLoading" style="color:#555;font-size:13px;padding:20px 0">Click Refresh to load contacts.</div>
+        <div id="contactsTable" style="display:none">
+          <table class="contact-table">
+            <thead><tr>
+              <th style="width:36px"><input type="checkbox" id="masterCheck" onchange="masterToggle(this)"></th>
+              <th>Name</th>
+              <th>Company</th>
+              <th>Email</th>
+              <th>Status</th>
+            </tr></thead>
+            <tbody id="contactRows"></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
+          <button class="btn green" onclick="sendEmails()"><span id="esp" style="display:none" class="spin"></span>📤 Send to Selected</button>
+          <span id="selectedCount" style="color:#666;font-size:13px"></span>
+        </div>
+        <div class="log" id="elog"></div>
+      </div>
+
+      <div class="card">
+        <h3>✉️ Email Templates</h3>
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;color:#4fa3e0;font-weight:600;margin-bottom:6px">EMAIL 1 — Cold Outreach</div>
+          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Social media for [Company]<br>Hi [First Name], Most business owners know they should be more active on social media — they just never get around to it...<br>Plans start at $497/month. Worth a 15-minute call?</div>
+        </div>
+        <div style="margin-bottom:12px;border-top:1px solid #2a2f3d;padding-top:12px">
+          <div style="font-size:12px;color:#f7ba1e;font-weight:600;margin-bottom:6px">EMAIL 2 — Follow Up (Day 5)</div>
+          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Re: Social media for [Company]<br>Just circling back on my note from earlier this week...</div>
+        </div>
+        <div style="border-top:1px solid #2a2f3d;padding-top:12px">
+          <div style="font-size:12px;color:#e74c3c;font-weight:600;margin-bottom:6px">EMAIL 3 — Final (Day 10)</div>
+          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Last note — [Company]<br>I'll keep this short — last note from me...</div>
+        </div>
       </div>
     </div>
 
@@ -174,25 +257,27 @@
   </div>
 </div>
 <script>
-// ── Config ──────────────────────────────────────────────────────────────────
-const PROXY = 'https://corsproxy.io/?';
+const RENDER_API = 'https://mozok-agent.onrender.com/api/graph';
+const HUBSPOT_KEY = 'CiRuYTMtN2E3ZC05ZmI4LTQ0N2YtYjNjNi1iYjQwNTVjYjNmOTYQ2djIowEYhfHDKioZAAXmkYJEnTw87Jio63bEmZnloTjpyzpyZEoDbmEz';
 
 let listId = '';
 let connected = false;
 let days = [];
 let stasks = [];
+let allContacts = [];
 
 const tid = () => document.getElementById('tid').value.trim();
 const cid = () => document.getElementById('cid').value.trim();
 const cs  = () => document.getElementById('cs').value.trim();
 const em  = () => document.getElementById('em').value.trim();
 
-// ── Nav ─────────────────────────────────────────────────────────────────────
+// ── Nav ──────────────────────────────────────────────────────────────────────
 function show(n) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav').forEach(v=>v.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');
   document.getElementById('nav-'+n).classList.add('active');
+  if(n==='email') loadContacts();
 }
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -213,12 +298,203 @@ async function connect() {
 }
 
 async function callRender(action, extra={}) {
-  const RENDER_API = "https://mozok-agent.onrender.com/api/graph"; const r = await fetch(RENDER_API, {
+  const r = await fetch(RENDER_API, {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({tenantId:tid(),clientId:cid(),clientSecret:cs(),userEmail:em(),action,...extra})
   });
   return r.json();
+}
+
+// ── HubSpot ──────────────────────────────────────────────────────────────────
+async function hsGet(path) {
+  const r = await fetch(`https://api.hubapi.com${path}`, {
+    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}` }
+  });
+  return r.json();
+}
+
+async function hsPost(path, body) {
+  const r = await fetch(`https://api.hubapi.com${path}`, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+async function hsPatch(path, body) {
+  const r = await fetch(`https://api.hubapi.com${path}`, {
+    method: 'PATCH',
+    headers: { 'Authorization': `Bearer ${HUBSPOT_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+// ── Load Contacts ─────────────────────────────────────────────────────────────
+async function loadContacts() {
+  const filter = document.getElementById('emailFilter').value;
+  document.getElementById('contactsLoading').textContent = 'Loading contacts...';
+  document.getElementById('contactsLoading').style.display = 'block';
+  document.getElementById('contactsTable').style.display = 'none';
+
+  try {
+    // Load stats
+    const statuses = ['NEW','EMAIL_1_SENT','EMAIL_2_SENT','EMAIL_3_SENT'];
+    for (const s of statuses) {
+      const res = await hsPost('/crm/v3/objects/contacts/search', {
+        filterGroups: [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: s }] }],
+        limit: 1, properties: ['email']
+      });
+      const map = { NEW:'stat-new', EMAIL_1_SENT:'stat-e1', EMAIL_2_SENT:'stat-e2', EMAIL_3_SENT:'stat-e3' };
+      document.getElementById(map[s]).textContent = res.total || 0;
+    }
+
+    // Load contacts for selected filter — check follow-up due dates
+    let filterGroups = [{ filters: [{ propertyName: 'hs_lead_status', operator: 'EQ', value: filter }] }];
+    
+    const res = await hsPost('/crm/v3/objects/contacts/search', {
+      filterGroups,
+      limit: 100,
+      properties: ['firstname','lastname','email','company','hs_lead_status','email1_sent_date','email2_sent_date'],
+      sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }]
+    });
+
+    allContacts = (res.results || []).filter(c => {
+      const p = c.properties;
+      const status = p.hs_lead_status;
+      // For follow-ups, only show if enough days have passed
+      if (status === 'EMAIL_1_SENT' && p.email1_sent_date) {
+        const sent = new Date(p.email1_sent_date);
+        const daysSince = (Date.now() - sent) / 86400000;
+        return daysSince >= 5;
+      }
+      if (status === 'EMAIL_2_SENT' && p.email2_sent_date) {
+        const sent = new Date(p.email2_sent_date);
+        const daysSince = (Date.now() - sent) / 86400000;
+        return daysSince >= 5;
+      }
+      return true;
+    });
+
+    renderContacts();
+  } catch(e) {
+    document.getElementById('contactsLoading').textContent = 'Error loading contacts: ' + e.message;
+  }
+}
+
+function filterContacts() { loadContacts(); }
+
+function renderContacts() {
+  const tbody = document.getElementById('contactRows');
+  if (!allContacts.length) {
+    document.getElementById('contactsLoading').textContent = 'No contacts ready for this email stage.';
+    document.getElementById('contactsLoading').style.display = 'block';
+    document.getElementById('contactsTable').style.display = 'none';
+    return;
+  }
+
+  const statusBadge = { NEW:'badge-new', EMAIL_1_SENT:'badge-e1', EMAIL_2_SENT:'badge-e2', EMAIL_3_SENT:'badge-e3' };
+  const statusLabel = { NEW:'New', EMAIL_1_SENT:'Email 1 Sent', EMAIL_2_SENT:'Email 2 Sent', EMAIL_3_SENT:'Email 3 Sent' };
+
+  tbody.innerHTML = allContacts.map((c,i) => {
+    const p = c.properties;
+    const status = p.hs_lead_status || 'NEW';
+    return `<tr>
+      <td><input type="checkbox" class="contact-cb" data-idx="${i}" onchange="updateCount()"></td>
+      <td>${p.firstname||''} ${p.lastname||''}</td>
+      <td style="color:#888">${p.company||''}</td>
+      <td style="color:#4fa3e0">${p.email||''}</td>
+      <td><span class="badge ${statusBadge[status]||'badge-new'}">${statusLabel[status]||status}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('contactsLoading').style.display = 'none';
+  document.getElementById('contactsTable').style.display = 'block';
+  updateCount();
+}
+
+function selectAll() { document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=true); updateCount(); }
+function selectNone() { document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=false); updateCount(); }
+function masterToggle(cb) { document.querySelectorAll('.contact-cb').forEach(c=>c.checked=cb.checked); updateCount(); }
+function updateCount() {
+  const n = document.querySelectorAll('.contact-cb:checked').length;
+  document.getElementById('selectedCount').textContent = n ? `${n} contact${n>1?'s':''} selected` : '';
+}
+
+// ── Send Emails ───────────────────────────────────────────────────────────────
+async function sendEmails() {
+  if (!connected) { alert('Connect to Outlook first.'); return; }
+  const selected = [...document.querySelectorAll('.contact-cb:checked')].map(cb => allContacts[parseInt(cb.dataset.idx)]);
+  if (!selected.length) { alert('Select at least one contact.'); return; }
+
+  slog('elog'); sp('esp',1);
+  log('elog','i',`→ Sending to ${selected.length} contacts...`);
+
+  const filter = document.getElementById('emailFilter').value;
+  let sent = 0, failed = 0;
+
+  for (const contact of selected) {
+    const p = contact.properties;
+    const firstName = p.firstname || 'there';
+    const company = p.company || 'your company';
+    const email = p.email;
+    const isCanadian = (p.phone||'').includes('226') || (p.phone||'').includes('519');
+    const phone = isCanadian ? '226-214-1660' : '248-800-3405';
+
+    let subject, body, newStatus, dateField;
+
+    if (filter === 'NEW') {
+      subject = `Social media for ${company}`;
+      body = `Hi ${firstName},\n\nMost business owners I talk to know they should be more active on social media — they just never get around to it.\n\nBetween running the operation and everything else on your plate, it keeps getting pushed to tomorrow.\n\nThat's exactly what Mozok solves. We handle your content, scheduling, and posting across LinkedIn, Facebook, and Instagram every month. You approve by email before anything goes live. That's it.\n\nNo logins. No long-term contracts. Plans start at $497/month.\n\nWorth a 15-minute call?\n\nMike\nmozok.co | ${phone}`;
+      newStatus = 'EMAIL_1_SENT';
+      dateField = 'email1_sent_date';
+    } else if (filter === 'EMAIL_1_SENT') {
+      subject = `Re: Social media for ${company}`;
+      body = `Hi ${firstName},\n\nJust circling back on my note from earlier this week.\n\nIf social media has been on your to-do list but keeps getting pushed — that's exactly who we built Mozok for.\n\nHappy to show you how it works in 15 minutes.\n\nMike\nmozok.co | ${phone}`;
+      newStatus = 'EMAIL_2_SENT';
+      dateField = 'email2_sent_date';
+    } else {
+      subject = `Last note — ${company}`;
+      body = `Hi ${firstName},\n\nI'll keep this short — last note from me.\n\nIf the timing isn't right, no worries at all. If social media ever becomes a priority, we're at mozok.co.\n\nMike\n${phone}`;
+      newStatus = 'EMAIL_3_SENT';
+      dateField = 'email3_sent_date';
+    }
+
+    try {
+      // Send via Render backend (Microsoft Graph)
+      const r = await callRender('sendEmail', {
+        to: email,
+        subject,
+        body
+      });
+
+      if (r.success || r.status === 202) {
+        // Update HubSpot status
+        await hsPatch(`/crm/v3/objects/contacts/${contact.id}`, {
+          properties: {
+            hs_lead_status: newStatus,
+            [dateField]: new Date().toISOString().split('T')[0]
+          }
+        });
+        sent++;
+        log('elog','s',`✓ ${firstName} ${p.lastname||''} <${email}>`);
+      } else {
+        failed++;
+        log('elog','e',`✗ ${email}: ${r.error||'Send failed'}`);
+      }
+    } catch(e) {
+      failed++;
+      log('elog','e',`✗ ${email}: ${e.message}`);
+    }
+
+    await new Promise(r=>setTimeout(r,300)); // Small delay between sends
+  }
+
+  log('elog','i',`\n📊 Done: ${sent} sent, ${failed} failed`);
+  sp('esp',0);
+  if (sent > 0) setTimeout(loadContacts, 1000);
 }
 
 // ── Tasks ────────────────────────────────────────────────────────────────────
@@ -303,14 +579,14 @@ async function createEvent(){
   const cat=document.getElementById('ccat').value;
   slog('clog');sp('csp',1);
   log('clog','i',`→ Creating event: "${title}"...`);
-  const r=await graph(`/users/${em()}/events`,'POST',{
+  const r=await callRender('createEvent',{eventData:{
     subject:`[${cat}] ${title}`,
-    body:{contentType:'text',content:document.getElementById('cn').value},
-    start:{dateTime:start.toISOString().replace('Z',''),timeZone:'America/Toronto'},
-    end:{dateTime:end.toISOString().replace('Z',''),timeZone:'America/Toronto'},
-    categories:[cat]
-  });
-  if(r.error)log('clog','e','✗ '+r.error.message);
+    body:document.getElementById('cn').value,
+    start:start.toISOString(),
+    end:end.toISOString(),
+    category:cat
+  }});
+  if(r.error)log('clog','e','✗ '+r.error);
   else log('clog','s','✓ Event added to Outlook calendar!');
   sp('csp',0);
 }
