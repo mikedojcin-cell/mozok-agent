@@ -1,0 +1,25 @@
+name: Daily Apollo Contact Sync
+
+on:
+  schedule:
+    - cron: '0 13 * * 1-5'  # 8am EST (UTC-5), weekdays only
+  workflow_dispatch:         # Allow manual trigger from GitHub Actions tab
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Run contact sync
+        env:
+          APOLLO_KEY: ${{ secrets.APOLLO_KEY }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: node sync-contacts.js
