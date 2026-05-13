@@ -1,23 +1,37 @@
 const express = require('express');
 const https = require('https');
 const path = require('path');
-const fs = require('fs');
 const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-const CONTACTS_FILE = path.join(__dirname, 'contacts.json');
+const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
 
-function loadContacts() {
-  try {
-    return JSON.parse(fs.readFileSync(CONTACTS_FILE, 'utf8'));
-  } catch(e) {
-    return [];
-  }
-}
-
-function saveContacts(contacts) {
-  fs.writeFileSync(CONTACTS_FILE, JSON.stringify(contacts, null, 2));
+async function supabase(method, endpoint, body) {
+  return new Promise((resolve, reject) => {
+    const data = body ? JSON.stringify(body) : null;
+    const url = new URL(SUPABASE_URL + endpoint);
+    const req = https.request({
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      method,
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': method === 'POST' ? 'return=representation' : '',
+        ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
+      }
+    }, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve([]); } });
+    });
+    req.on('error', reject);
+    if (data) req.write(data);
+    req.end();
+  });
 }
 
 async function getToken(tenantId, clientId, clientSecret) {
@@ -68,31 +82,41 @@ async function graphCall(token, method, urlPath, body) {
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
 
-  // Contact actions — no Microsoft token needed
+  // Supabase contact actions
   if (action === 'getContacts') {
     const { status } = req.body;
-    const contacts = loadContacts().filter(c => c.status === status);
-    return res.json({ results: contacts, total: contacts.length });
+    try {
+      const data = await supabase('GET', `/rest/v1/contacts?status=eq.${status}&order=created_at.desc&limit=100`);
+      return res.json({ results: Array.isArray(data) ? data : [], total: Array.isArray(data) ? data.length : 0 });
+    } catch(e) { return res.json({ error: e.message }); }
   }
 
   if (action === 'updateContact') {
     const { contactId, props } = req.body;
-    const contacts = loadContacts();
-    const idx = contacts.findIndex(c => c.id === contactId);
-    if (idx >= 0) {
-      contacts[idx] = { ...contacts[idx], ...props };
-      saveContacts(contacts);
-    }
-    return res.json({ success: true });
+    try {
+      await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, props);
+      return res.json({ success: true });
+    } catch(e) { return res.json({ error: e.message }); }
   }
 
   if (action === 'addContacts') {
     const { newContacts } = req.body;
-    const contacts = loadContacts();
-    const existing = new Set(contacts.map(c => c.email));
-    const toAdd = newContacts.filter(c => !existing.has(c.email));
-    saveContacts([...contacts, ...toAdd]);
-    return res.json({ success: true, added: toAdd.length });
+    try {
+      const result = await supabase('POST', '/rest/v1/contacts', newContacts);
+      return res.json({ success: true, added: Array.isArray(result) ? result.length : 0 });
+    } catch(e) { return res.json({ error: e.message }); }
+  }
+
+  if (action === 'getStats') {
+    try {
+      const statuses = ['NEW', 'EMAIL_1_SENT', 'EMAIL_2_SENT', 'EMAIL_3_SENT'];
+      const stats = {};
+      for (const s of statuses) {
+        const data = await supabase('GET', `/rest/v1/contacts?status=eq.${s}&select=id`);
+        stats[s] = Array.isArray(data) ? data.length : 0;
+      }
+      return res.json(stats);
+    } catch(e) { return res.json({ error: e.message }); }
   }
 
   // Microsoft actions
