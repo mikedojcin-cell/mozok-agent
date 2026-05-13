@@ -439,10 +439,8 @@ async function sendEmails() {
       if (r.success || r.status === 202) {
         // Update HubSpot status
         await hsPatch(contact.id, {
-          properties: {
             status: newStatus,
             [dateField]: new Date().toISOString().split('T')[0]
-          }
         });
         sent++;
         log('elog','s',`✓ ${firstName} ${contact.lastname||''} <${email}>`);
