@@ -70,7 +70,7 @@ async function syncContacts() {
       q_not_email_status: ['bounced'],
       person_titles: ['owner', 'president', 'ceo', 'purchasing manager', 'operations manager'],
       page: 1,
-      per_page: 50
+      per_page: 100
     });
 
     if (!apolloData.people || apolloData.people.length === 0) {
