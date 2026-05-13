@@ -2,7 +2,7 @@ const https = require('https');
 
 const APOLLO_KEY = process.env.APOLLO_KEY;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
-const SUPABASE_URL = 'https://your-project.supabase.co'; // ← You need to update this
+const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 
 function apolloRequest(body) {
   return new Promise((resolve, reject) => {
