@@ -366,12 +366,20 @@ function renderContacts() {
       <td style="color:#888">${c.company||''}</td>
       <td style="color:#4fa3e0">${c.email||''}</td>
       <td><span class="badge ${statusBadge[status]||'badge-new'}">${statusLabel[status]||status}</span></td>
+      <td><button onclick="removeContact(${i})" style="background:#2a2f3d;border:none;color:#e74c3c;cursor:pointer;padding:4px 10px;border-radius:4px;font-size:11px">✕ Remove</button></td>
     </tr>`;
   }).join('');
 
   document.getElementById('contactsLoading').style.display = 'none';
   document.getElementById('contactsTable').style.display = 'block';
   updateCount();
+}
+
+function removeContact(idx) {
+  allContacts[idx].status = 'REMOVED';
+  callRender('updateContact', { contactId: allContacts[idx].id, props: { status: 'REMOVED' } });
+  allContacts.splice(idx, 1);
+  renderContacts();
 }
 
 function selectAll() { document.querySelectorAll('.contact-cb').forEach(cb=>cb.checked=true); updateCount(); }
