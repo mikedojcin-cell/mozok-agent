@@ -359,13 +359,12 @@ function renderContacts() {
   const statusLabel = { NEW:'New', EMAIL_1_SENT:'Email 1 Sent', EMAIL_2_SENT:'Email 2 Sent', EMAIL_3_SENT:'Email 3 Sent' };
 
   tbody.innerHTML = allContacts.map((c,i) => {
-    const p = c.properties;
     const status = c.status || 'NEW';
     return `<tr>
       <td><input type="checkbox" class="contact-cb" data-idx="${i}" onchange="updateCount()"></td>
       <td>${c.firstname||''} ${c.lastname||''}</td>
-      <td style="color:#888">${p.company||''}</td>
-      <td style="color:#4fa3e0">${p.email||''}</td>
+      <td style="color:#888">${c.company||''}</td>
+      <td style="color:#4fa3e0">${c.email||''}</td>
       <td><span class="badge ${statusBadge[status]||'badge-new'}">${statusLabel[status]||status}</span></td>
     </tr>`;
   }).join('');
@@ -396,7 +395,6 @@ async function sendEmails() {
   let sent = 0, failed = 0;
 
   for (const contact of selected) {
-    const p = contact.properties;
     const firstName = contact.firstname || 'there';
     const company = contact.company || 'your company';
     const email = contact.email;
