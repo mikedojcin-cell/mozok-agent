@@ -323,8 +323,7 @@ async function loadContacts() {
     const res = await hsPost(filter);
 
     allContacts = (res.results || []).filter(c => {
-      const p = c.properties;
-      const status = p.status;
+      const status = c.status;
       // For follow-ups, only show if enough days have passed
       if (status === 'EMAIL_1_SENT' && p.email1_sent_date) {
         const sent = new Date(p.email1_sent_date);
@@ -361,7 +360,7 @@ function renderContacts() {
 
   tbody.innerHTML = allContacts.map((c,i) => {
     const p = c.properties;
-    const status = p.status || 'NEW';
+    const status = c.status || 'NEW';
     return `<tr>
       <td><input type="checkbox" class="contact-cb" data-idx="${i}" onchange="updateCount()"></td>
       <td>${p.firstname||''} ${p.lastname||''}</td>
