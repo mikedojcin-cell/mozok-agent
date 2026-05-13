@@ -325,13 +325,13 @@ async function loadContacts() {
     allContacts = (res.results || []).filter(c => {
       const status = c.status;
       // For follow-ups, only show if enough days have passed
-      if (status === 'EMAIL_1_SENT' && p.email1_sent_date) {
-        const sent = new Date(p.email1_sent_date);
+      if (status === 'EMAIL_1_SENT' && c.email1_sent_date) {
+        const sent = new Date(c.email1_sent_date);
         const daysSince = (Date.now() - sent) / 86400000;
         return daysSince >= 5;
       }
-      if (status === 'EMAIL_2_SENT' && p.email2_sent_date) {
-        const sent = new Date(p.email2_sent_date);
+      if (status === 'EMAIL_2_SENT' && c.email2_sent_date) {
+        const sent = new Date(c.email2_sent_date);
         const daysSince = (Date.now() - sent) / 86400000;
         return daysSince >= 5;
       }
@@ -363,7 +363,7 @@ function renderContacts() {
     const status = c.status || 'NEW';
     return `<tr>
       <td><input type="checkbox" class="contact-cb" data-idx="${i}" onchange="updateCount()"></td>
-      <td>${p.firstname||''} ${p.lastname||''}</td>
+      <td>${c.firstname||''} ${c.lastname||''}</td>
       <td style="color:#888">${p.company||''}</td>
       <td style="color:#4fa3e0">${p.email||''}</td>
       <td><span class="badge ${statusBadge[status]||'badge-new'}">${statusLabel[status]||status}</span></td>
@@ -397,10 +397,10 @@ async function sendEmails() {
 
   for (const contact of selected) {
     const p = contact.properties;
-    const firstName = p.firstname || 'there';
-    const company = p.company || 'your company';
-    const email = p.email;
-    const isCanadian = (p.phone||'').includes('226') || (p.phone||'').includes('519');
+    const firstName = contact.firstname || 'there';
+    const company = contact.company || 'your company';
+    const email = contact.email;
+    const isCanadian = (contact.phone||'').includes('226') || (contact.phone||'').includes('519');
     const phone = isCanadian ? '226-214-1660' : '248-800-3405';
 
     let subject, body, newStatus, dateField;
@@ -439,7 +439,7 @@ async function sendEmails() {
           }
         });
         sent++;
-        log('elog','s',`✓ ${firstName} ${p.lastname||''} <${email}>`);
+        log('elog','s',`✓ ${firstName} ${contact.lastname||''} <${email}>`);
       } else {
         failed++;
         log('elog','e',`✗ ${email}: ${r.error||'Send failed'}`);
