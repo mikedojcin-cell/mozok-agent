@@ -124,10 +124,9 @@ async function syncContacts() {
 
     const contacts = apolloData.people.map(p => ({
       apollo_id: p.id,
-      first_name: p.first_name || '',
-      last_name: p.last_name || '',
+      firstname: p.first_name || '',
+      lastname: p.last_name || '',
       email: p.email || '',
-      title: p.title || '',
       company: p.organization ? p.organization.name : '',
       phone: p.phone_numbers && p.phone_numbers[0] ? p.phone_numbers[0].raw_number : '',
       linkedin: p.linkedin_url || '',
