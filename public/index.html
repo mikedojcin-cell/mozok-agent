@@ -148,11 +148,11 @@
         <h3>✉️ Email Templates</h3>
         <div style="margin-bottom:12px">
           <div style="font-size:12px;color:#4fa3e0;font-weight:600;margin-bottom:6px">EMAIL 1 — Cold Outreach</div>
-          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Social media for [Company]<br>Hi [First Name], Most business owners know they should be more active on social media — they just never get around to it...<br>Plans start at $497/month. Worth a 15-minute call?</div>
+          <div style="font-size:12px;color:#888;line-height:1.6">Subject: quick question, ${firstName}<br>Hi [First Name], Most business owners know they should be more active on social media — they just never get around to it...<br>Plans start at $497/month. Worth a 15-minute call?</div>
         </div>
         <div style="margin-bottom:12px;border-top:1px solid #2a2f3d;padding-top:12px">
           <div style="font-size:12px;color:#f7ba1e;font-weight:600;margin-bottom:6px">EMAIL 2 — Follow Up (Day 5)</div>
-          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Re: Social media for [Company]<br>Just circling back on my note from earlier this week...</div>
+          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Re: quick question, ${firstName}<br>Just circling back on my note from earlier this week...</div>
         </div>
         <div style="border-top:1px solid #2a2f3d;padding-top:12px">
           <div style="font-size:12px;color:#e74c3c;font-weight:600;margin-bottom:6px">EMAIL 3 — Final (Day 10)</div>
@@ -412,12 +412,12 @@ async function sendEmails() {
     let subject, body, newStatus, dateField;
 
     if (filter === 'NEW') {
-      subject = `Social media for ${company}`;
+      subject = `quick question, ${firstName}`;
       body = `Hi ${firstName},\n\nMost business owners I talk to know they should be more active on social media — they just never get around to it.\n\nBetween running the operation and everything else on your plate, it keeps getting pushed to tomorrow.\n\nThat's exactly what Mozok solves. We handle your content, scheduling, and posting across LinkedIn, Facebook, and Instagram every month. You approve by email before anything goes live. That's it.\n\nNo logins. No long-term contracts. Plans start at $497/month.\n\nWorth a 15-minute call?\n\nMike\nmozok.co | ${phone}`;
       newStatus = 'EMAIL_1_SENT';
       dateField = 'email1_sent_date';
     } else if (filter === 'EMAIL_1_SENT') {
-      subject = `Re: Social media for ${company}`;
+      subject = `Re: quick question, ${firstName}`;
       body = `Hi ${firstName},\n\nJust circling back on my note from earlier this week.\n\nIf social media has been on your to-do list but keeps getting pushed — that's exactly who we built Mozok for.\n\nHappy to show you how it works in 15 minutes.\n\nMike\nmozok.co | ${phone}`;
       newStatus = 'EMAIL_2_SENT';
       dateField = 'email2_sent_date';
