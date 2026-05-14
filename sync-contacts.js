@@ -9,7 +9,7 @@ function apolloRequest(body) {
     const data = JSON.stringify(body);
     const options = {
       hostname: 'api.apollo.io',
-      path: '/api/v1/mixed_people/search',
+      path: '/v1/mixed_people/search',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -101,6 +101,7 @@ async function syncContacts() {
     console.log(`Searching: ${config.locations.join(', ')} | Titles: ${config.titles.join(', ')} | Page: ${state.page}`);
 
     const apolloData = await apolloRequest({
+      api_key: APOLLO_KEY,
       person_titles: config.titles,
       person_locations: config.locations,
       organization_num_employees_ranges: ['1,10', '11,50', '51,200'],
@@ -110,6 +111,7 @@ async function syncContacts() {
     });
 
     if (!apolloData.people || apolloData.people.length === 0) {
+      console.log(`Apollo response: ${JSON.stringify(apolloData).substring(0, 300)}`);
       console.log(`No contacts on page ${state.page} for this config. Moving to next location.`);
       // Advance to next config, reset page
       state = { config_index: (state.config_index + 1) % SEARCH_CONFIGS.length, page: 1 };
