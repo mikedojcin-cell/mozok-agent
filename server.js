@@ -7,6 +7,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const META_APP_ID = process.env.META_APP_ID;
+const META_APP_SECRET = process.env.META_APP_SECRET;
+const META_REDIRECT = 'https://mozok-agent.onrender.com/auth/meta/callback';
 
 async function supabase(method, endpoint, body) {
   return new Promise((resolve, reject) => {
@@ -79,10 +82,21 @@ async function graphCall(token, method, urlPath, body) {
   });
 }
 
+async function metaGet(url) {
+  return new Promise((resolve, reject) => {
+    https.get(url, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve({}); } });
+    }).on('error', reject);
+  });
+}
+
+// ─── SUPABASE CONTACT ROUTES ─────────────────────────────────────────────────
+
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
 
-  // Supabase contact actions
   if (action === 'getContacts') {
     const { status } = req.body;
     try {
@@ -119,7 +133,7 @@ app.post('/api/graph', async (req, res) => {
     } catch(e) { return res.json({ error: e.message }); }
   }
 
-  // Microsoft actions
+  // ─── MICROSOFT GRAPH ───────────────────────────────────────────────────────
   try {
     const tokenRes = await getToken(tenantId, clientId, clientSecret);
     if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
@@ -185,6 +199,84 @@ app.post('/api/graph', async (req, res) => {
     return res.json({ error: e.message });
   }
 });
+
+// ─── META OAUTH ───────────────────────────────────────────────────────────────
+
+app.get('/auth/meta', (req, res) => {
+  const { clientId } = req.query;
+  const scope = [
+    'pages_show_list',
+    'pages_read_engagement',
+    'pages_read_user_content',
+    'instagram_basic',
+    'instagram_manage_insights',
+    'read_insights'
+  ].join(',');
+  const url = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(META_REDIRECT)}&scope=${scope}&state=${clientId}`;
+  res.redirect(url);
+});
+
+app.get('/auth/meta/callback', async (req, res) => {
+  const { code, state: clientId } = req.query;
+  if (!code) return res.send('Error: no code returned from Meta');
+  try {
+    const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(META_REDIRECT)}&client_secret=${META_APP_SECRET}&code=${code}`;
+    const tokenRes = await metaGet(tokenUrl);
+    if (!tokenRes.access_token) return res.send('Error getting access token: ' + JSON.stringify(tokenRes));
+    await supabase('PATCH', `/rest/v1/clients?id=eq.${clientId}`, {
+      meta_access_token: tokenRes.access_token
+    });
+    res.redirect('/dashboard.html?connected=true');
+  } catch(e) {
+    res.send('Error: ' + e.message);
+  }
+});
+
+// ─── META INSIGHTS ────────────────────────────────────────────────────────────
+
+app.get('/api/meta/pages/:clientId', async (req, res) => {
+  const { clientId } = req.params;
+  try {
+    const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
+    const token = rows[0]?.meta_access_token;
+    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
+    const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
+    res.json({ pages: pages.data || [] });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
+
+app.get('/api/meta/insights/:clientId', async (req, res) => {
+  const { clientId } = req.params;
+  try {
+    const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
+    const token = rows[0]?.meta_access_token;
+    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
+
+    const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
+    if (!pages.data || !pages.data.length) return res.json({ error: 'No pages found' });
+
+    const page = pages.data[0];
+    const pageToken = page.access_token;
+    const pageId = page.id;
+
+    const [insights, posts] = await Promise.all([
+      metaGet(`https://graph.facebook.com/v19.0/${pageId}/insights?metric=page_impressions,page_reach,page_engaged_users&period=month&access_token=${pageToken}`),
+      metaGet(`https://graph.facebook.com/v19.0/${pageId}/posts?fields=message,created_time,insights.metric(post_impressions,post_engaged_users)&limit=10&access_token=${pageToken}`)
+    ]);
+
+    res.json({
+      page: { id: pageId, name: page.name },
+      insights: insights.data || [],
+      posts: posts.data || []
+    });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
+
+// ─── CATCH ALL ────────────────────────────────────────────────────────────────
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
