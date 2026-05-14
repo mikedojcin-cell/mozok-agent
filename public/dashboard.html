@@ -179,6 +179,7 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
     <button class="tab" onclick="switchTab('clients',this)">Clients</button>
     <button class="tab" onclick="switchTab('social',this)">Social tracker</button>
     <button class="tab" onclick="switchTab('leads',this)">Lead funnel</button>
+    <button class="tab" onclick="switchTab('postcreator',this)">✦ Post creator</button>
   </div>
 
   <!-- OVERVIEW -->
@@ -276,9 +277,138 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
     </table>
   </div>
 
+  <!-- POST CREATOR -->
+  <div id="view-postcreator" class="view">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+
+      <!-- LEFT: INPUTS -->
+      <div>
+        <div class="section-title" style="margin-bottom:14px;">Post brief</div>
+
+        <div class="card-wrap" style="margin-bottom:12px;">
+          <div class="field"><label>Client</label>
+            <select id="pc-client" style="width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);">
+              <option value="">— Select client —</option>
+            </select>
+          </div>
+          <div class="field"><label>Platform</label>
+            <select id="pc-platform" style="width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);">
+              <option value="LinkedIn">LinkedIn</option>
+              <option value="Instagram">Instagram</option>
+              <option value="Facebook">Facebook</option>
+              <option value="TikTok">TikTok (caption)</option>
+              <option value="Google">Google Business</option>
+            </select>
+          </div>
+          <div class="field"><label>Industry / Business type</label>
+            <input id="pc-industry" placeholder="e.g. Roofing contractor, Windsor Ontario" style="width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);" />
+          </div>
+          <div class="field"><label>Post type</label>
+            <select id="pc-type" style="width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);">
+              <option value="tip">💡 Industry tip / advice</option>
+              <option value="story">📖 Client story / case study</option>
+              <option value="promo">📣 Promotion / offer</option>
+              <option value="proof">⭐ Social proof / review highlight</option>
+              <option value="bts">🎬 Behind the scenes</option>
+              <option value="opinion">💬 Bold opinion / hot take</option>
+              <option value="problem">❓ Problem your business solves</option>
+              <option value="seasonal">📅 Seasonal / timely content</option>
+            </select>
+          </div>
+          <div class="field"><label>Key details / talking points</label>
+            <textarea id="pc-details" placeholder="e.g. We just completed a full roof replacement for a family in LaSalle. Used GAF shingles, finished in one day, client was thrilled. 5-star review." style="width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);min-height:90px;resize:vertical;"></textarea>
+          </div>
+          <div class="field"><label>Brand voice</label>
+            <select id="pc-voice" style="width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);">
+              <option value="professional">Professional & trustworthy</option>
+              <option value="friendly">Friendly & approachable</option>
+              <option value="bold">Bold & direct</option>
+              <option value="educational">Educational & informative</option>
+              <option value="conversational">Conversational & casual</option>
+            </select>
+          </div>
+          <div class="field"><label>Call to action</label>
+            <input id="pc-cta" placeholder="e.g. Free estimate, Book a call, DM us, Visit our website" style="width:100%;font-size:13px;padding:7px 10px;border-radius:var(--radius);border:0.5px solid var(--border-strong);background:var(--surface);color:var(--text);" />
+          </div>
+        </div>
+
+        <!-- QUICK TEMPLATES -->
+        <div class="section-title" style="margin-bottom:10px;">Quick templates</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;">
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="quickFill('roofing')">🏠 Roofing</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="quickFill('restaurant')">🍽 Restaurant</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="quickFill('dental')">🦷 Dental</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="quickFill('fitness')">💪 Fitness</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="quickFill('florist')">🌸 Florist</button>
+          <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="quickFill('contractor')">🔧 Contractor</button>
+        </div>
+
+        <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:10px;" onclick="generatePost()">
+          <i class="ti ti-sparkles"></i> Generate post
+        </button>
+        <div id="pc-error" style="font-size:12px;color:#c0392b;margin-top:8px;display:none;"></div>
+      </div>
+
+      <!-- RIGHT: OUTPUT -->
+      <div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+          <div class="section-title">Generated post</div>
+          <div style="display:flex;gap:6px;">
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="regeneratePost()" id="pc-regen" style="display:none;">↻ Regenerate</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="copyPost()" id="pc-copy" style="display:none;">Copy</button>
+            <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;margin:0;" onclick="logPost()" id="pc-log" style="display:none;">+ Log to tracker</button>
+          </div>
+        </div>
+
+        <div id="pc-loading" style="display:none;text-align:center;padding:3rem 1rem;">
+          <div style="font-size:13px;color:var(--text-3);margin-bottom:8px;">Generating your post...</div>
+          <div style="width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--moz);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div>
+        </div>
+
+        <div id="pc-output" style="display:none;">
+          <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;min-height:300px;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:0.5px solid var(--border);">
+              <div style="width:36px;height:36px;border-radius:50%;background:var(--moz-light);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--moz);" id="pc-avatar">—</div>
+              <div>
+                <div style="font-size:13px;font-weight:500;" id="pc-clientname">Client name</div>
+                <div style="font-size:11px;color:var(--text-3);" id="pc-platformlabel">LinkedIn · Just now</div>
+              </div>
+            </div>
+            <div id="pc-post-text" style="font-size:14px;line-height:1.7;color:var(--text);white-space:pre-wrap;"></div>
+          </div>
+
+          <!-- SUGGESTIONS -->
+          <div id="pc-suggestions" style="margin-top:12px;"></div>
+
+          <!-- VARIATIONS -->
+          <div style="margin-top:12px;">
+            <div style="font-size:12px;font-weight:500;color:var(--text-3);margin-bottom:8px;">Try a different angle:</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;" id="pc-variations"></div>
+          </div>
+        </div>
+
+        <div id="pc-empty" style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:3rem 1rem;text-align:center;color:var(--text-3);font-size:13px;">
+          Fill in the brief and click Generate post
+        </div>
+      </div>
+    </div>
+
+    <!-- POST HISTORY -->
+    <div style="margin-top:1.5rem;">
+      <div class="section-title" style="margin-bottom:10px;">Generated this session</div>
+      <div id="pc-history" style="display:flex;flex-direction:column;gap:8px;">
+        <div style="font-size:13px;color:var(--text-3);">No posts generated yet.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- NEW CLIENT MODAL -->
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+.field { margin-bottom:10px; }
+.field label { font-size:12px;color:var(--text-3);display:block;margin-bottom:4px; }
+</style>
 <div id="modal-client" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h3>Add new client</h3>
@@ -435,6 +565,7 @@ function clientCardHTML(c, clickable) {
 function refreshAll() {
   renderOverview();
   populateSelects();
+  populatePostCreatorClients();
   if (currentTab === 'clients') renderClients();
   if (currentTab === 'social') renderSocial();
   if (currentTab === 'leads') renderLeads();
@@ -614,6 +745,7 @@ function switchTab(tab, btn) {
   if (tab === 'clients') renderClients();
   if (tab === 'social') renderSocial();
   if (tab === 'leads') renderLeads();
+  if (tab === 'postcreator') populatePostCreatorClients();
 }
 
 function openNewClientModal() { document.getElementById('modal-client').style.display = 'flex'; }
@@ -711,6 +843,233 @@ const urlParams = new URLSearchParams(window.location.search);
 if (urlParams.get('connected') === 'true') {
   window.history.replaceState({}, '', '/dashboard.html');
   setTimeout(() => alert('Facebook connected successfully!'), 500);
+}
+
+// ─── POST CREATOR ─────────────────────────────────────────────────────────────
+
+let lastPostGenerated = '';
+let postHistory = [];
+
+function quickFill(industry) {
+  const fills = {
+    roofing: { industry: 'Roofing contractor, Windsor/Essex area', type: 'tip', voice: 'professional', cta: 'Free estimate — call or DM us', details: 'Spring is the best time to inspect your roof before summer storms. We serve Windsor, LaSalle, Tecumseh and surrounding areas.' },
+    restaurant: { industry: 'Local restaurant / café, Windsor Ontario', type: 'bts', voice: 'friendly', cta: 'Come visit us this week', details: 'Our kitchen team preps everything fresh every morning. New seasonal menu just launched.' },
+    dental: { industry: 'Dental clinic, Windsor Ontario', type: 'tip', voice: 'educational', cta: 'Book a free consultation', details: 'Patients often ask about teeth whitening options. We offer both in-office and take-home treatments.' },
+    fitness: { industry: 'Fitness studio / gym, Windsor Ontario', type: 'proof', voice: 'bold', cta: 'Start your free trial', details: 'Member just hit their 6-month transformation milestone. Lost 30lbs, gained confidence, shows up every day.' },
+    florist: { industry: 'Florist / flower shop, Windsor Ontario', type: 'seasonal', voice: 'friendly', cta: 'Order online or visit us', details: "Mother's Day bouquets are ready. Custom arrangements available with 24hr notice." },
+    contractor: { industry: 'General contractor / renovation company, Windsor Ontario', type: 'story', voice: 'professional', cta: 'Free quote this week', details: 'Just finished a full basement renovation in Lakeshore. Client went from unfinished concrete to a full family room and bathroom in 3 weeks.' }
+  };
+  const f = fills[industry];
+  if (!f) return;
+  document.getElementById('pc-industry').value = f.industry;
+  document.getElementById('pc-type').value = f.type;
+  document.getElementById('pc-voice').value = f.voice;
+  document.getElementById('pc-cta').value = f.cta;
+  document.getElementById('pc-details').value = f.details;
+}
+
+function buildPostPrompt() {
+  const platform = document.getElementById('pc-platform').value;
+  const industry = document.getElementById('pc-industry').value;
+  const type = document.getElementById('pc-type').value;
+  const details = document.getElementById('pc-details').value;
+  const voice = document.getElementById('pc-voice').value;
+  const cta = document.getElementById('pc-cta').value;
+
+  const platformGuide = {
+    LinkedIn: 'LinkedIn post. Use a strong single-line hook as the first line (no hashtag, no emoji on first line). Short punchy paragraphs of 1-2 sentences. Add line breaks between paragraphs. End with a clear CTA. 3-5 relevant hashtags at the very end. 150-300 words.',
+    Instagram: 'Instagram caption. Start with an attention-grabbing first line. Use emojis naturally throughout. Conversational and visual. End with CTA and a question to drive comments. 5-10 hashtags at the end. 100-200 words.',
+    Facebook: 'Facebook post. Conversational and warm. Tell a story or share value. Feels personal not corporate. CTA that encourages local engagement. No hashtags needed. 100-200 words.',
+    TikTok: 'TikTok video caption. Ultra short and punchy. Hook in first line. What the video is about. CTA to follow or comment. 3-5 hashtags. Under 100 words.',
+    Google: 'Google Business post. Professional and local. Highlight a specific offer, service, or update. CTA with phone number or booking link placeholder. Under 150 words.'
+  };
+
+  const typeGuide = {
+    tip: 'Share a genuinely useful industry tip or piece of advice. Be specific, not generic.',
+    story: 'Tell a real client success story. Include the problem, the solution, and the result. Make it feel human.',
+    promo: 'Promote a specific offer or service. Be direct about the value. Create urgency without being pushy.',
+    proof: 'Highlight social proof — a review, a result, a milestone. Let the results speak.',
+    bts: 'Take people behind the scenes of the business. Make it feel authentic and human.',
+    opinion: 'Share a bold opinion or hot take related to the industry. Take a clear stance.',
+    problem: 'Speak directly to a pain point your ideal customer has. Show you understand their world.',
+    seasonal: 'Create timely content tied to a season, holiday, or current moment.'
+  };
+
+  return `You are an expert social media content writer specializing in local small business marketing. Write a high-performing ${platform} post for a ${industry} business.
+
+POST TYPE: ${typeGuide[type]}
+
+PLATFORM REQUIREMENTS: ${platformGuide[platform]}
+
+BRAND VOICE: ${voice}
+
+KEY DETAILS TO INCLUDE: ${details || 'Use your best judgment based on the industry and post type.'}
+
+CALL TO ACTION: ${cta || 'Keep it natural and appropriate for the platform.'}
+
+CRITICAL RULES:
+- Never sound generic or AI-generated
+- Use specific details, not vague claims
+- The hook must stop the scroll — make it compelling
+- Write like a real person who knows this business, not a marketing robot
+- No corporate speak, no clichés like "In today's fast-paced world"
+- For LinkedIn: first line must stand alone as a complete thought that makes someone want to read more
+
+Write ONLY the post. No preamble, no explanation, no "Here's your post:". Just the post itself.`;
+}
+
+async function generatePost(variationType = null) {
+  const industry = document.getElementById('pc-industry').value.trim();
+  if (!industry) {
+    const errEl = document.getElementById('pc-error');
+    errEl.style.display = 'block';
+    errEl.textContent = 'Please fill in the industry / business type field.';
+    return;
+  }
+  document.getElementById('pc-error').style.display = 'none';
+
+  const platform = document.getElementById('pc-platform').value;
+  const clientSel = document.getElementById('pc-client');
+  const clientName = clientSel.options[clientSel.selectedIndex]?.text || 'Client';
+
+  document.getElementById('pc-empty').style.display = 'none';
+  document.getElementById('pc-output').style.display = 'none';
+  document.getElementById('pc-loading').style.display = 'block';
+
+  let prompt = variationType
+    ? `${buildPostPrompt()}\n\nIMPORTANT: Write a completely different version with a ${variationType} angle. Same details, fresh approach.`
+    : buildPostPrompt();
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await response.json();
+    const postText = data.content?.[0]?.text || '';
+
+    if (!postText) throw new Error('No content returned');
+
+    lastPostGenerated = postText;
+
+    // Update UI
+    document.getElementById('pc-loading').style.display = 'none';
+    document.getElementById('pc-output').style.display = 'block';
+    document.getElementById('pc-post-text').textContent = postText;
+    document.getElementById('pc-avatar').textContent = getInitials(clientName === '— Select client —' ? 'CL' : clientName);
+    document.getElementById('pc-clientname').textContent = clientName === '— Select client —' ? industry.split(',')[0] : clientName;
+    document.getElementById('pc-platformlabel').textContent = `${platform} · Just now`;
+    document.getElementById('pc-regen').style.display = 'inline-flex';
+    document.getElementById('pc-copy').style.display = 'inline-flex';
+    document.getElementById('pc-log').style.display = 'inline-flex';
+
+    // Suggestions
+    const wordCount = postText.split(' ').length;
+    const suggestions = [];
+    if (platform === 'LinkedIn' && !postText.includes('\n\n')) suggestions.push('💡 Add more line breaks — LinkedIn posts read better with white space');
+    if (platform === 'Instagram' && (postText.match(/#/g)||[]).length < 3) suggestions.push('💡 Add more hashtags for Instagram reach');
+    if (wordCount < 50) suggestions.push('💡 Post may be too short — try adding more detail');
+    if (postText.toLowerCase().includes('in today')) suggestions.push('⚠ Avoid opening with clichés — try a bolder hook');
+
+    const sugEl = document.getElementById('pc-suggestions');
+    sugEl.innerHTML = suggestions.length
+      ? suggestions.map(s => `<div style="font-size:12px;color:var(--text-2);background:var(--bg);border-radius:6px;padding:6px 10px;margin-bottom:4px;">${s}</div>`).join('')
+      : '<div style="font-size:12px;color:var(--moz);background:var(--moz-light);border-radius:6px;padding:6px 10px;">✓ Post looks good — strong structure and clear CTA</div>';
+
+    // Variation buttons
+    const variations = ['storytelling', 'bold/provocative', 'data-driven', 'humorous', 'educational'];
+    document.getElementById('pc-variations').innerHTML = variations.map(v =>
+      `<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;" onclick="generatePost('${v}')">${v}</button>`
+    ).join('');
+
+    // Add to history
+    const historyItem = {
+      platform,
+      clientName: clientName === '— Select client —' ? industry.split(',')[0] : clientName,
+      type: document.getElementById('pc-type').options[document.getElementById('pc-type').selectedIndex].text,
+      text: postText,
+      time: new Date().toLocaleTimeString('en-CA', {hour:'2-digit',minute:'2-digit'})
+    };
+    postHistory.unshift(historyItem);
+    renderPostHistory();
+
+  } catch(e) {
+    document.getElementById('pc-loading').style.display = 'none';
+    document.getElementById('pc-empty').style.display = 'block';
+    document.getElementById('pc-empty').textContent = 'Error generating post: ' + e.message;
+  }
+}
+
+function regeneratePost() { generatePost(); }
+
+function copyPost() {
+  navigator.clipboard.writeText(lastPostGenerated);
+  const btn = document.getElementById('pc-copy');
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+
+async function logPost() {
+  const clientId = document.getElementById('pc-client').value;
+  const platform = document.getElementById('pc-platform').value;
+  if (!clientId) { alert('Select a client to log this post'); return; }
+  const today = new Date().toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  const content = lastPostGenerated.split('\n')[0].substring(0, 100);
+  const [newPost] = await supa('POST','posts',{ client_id: clientId, content, platform, post_date: today, impressions: 0, engagement: 0, leads: 0 });
+  posts.unshift(newPost);
+  const btn = document.getElementById('pc-log');
+  btn.textContent = '✓ Logged';
+  btn.style.background = 'var(--moz-dark)';
+  setTimeout(() => { btn.textContent = '+ Log to tracker'; btn.style.background = ''; }, 2000);
+}
+
+function renderPostHistory() {
+  const el = document.getElementById('pc-history');
+  if (!postHistory.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-3);">No posts generated yet.</div>';
+    return;
+  }
+  el.innerHTML = postHistory.slice(0, 5).map(p => `
+    <div style="background:var(--surface);border:0.5px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:flex-start;gap:12px;">
+      <div style="flex:1;min-width:0;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <span class="badge b-li" style="font-size:10px;">${p.platform}</span>
+          <span style="font-size:11px;color:var(--text-3);">${p.clientName}</span>
+          <span style="font-size:11px;color:var(--text-3);">${p.time}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text-2);line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${p.text}</div>
+      </div>
+      <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin:0;flex-shrink:0;" onclick="restorePost(${postHistory.indexOf(p)})">Use</button>
+    </div>`).join('');
+}
+
+function restorePost(idx) {
+  const p = postHistory[idx];
+  lastPostGenerated = p.text;
+  document.getElementById('pc-post-text').textContent = p.text;
+  document.getElementById('pc-empty').style.display = 'none';
+  document.getElementById('pc-output').style.display = 'block';
+  document.getElementById('pc-regen').style.display = 'inline-flex';
+  document.getElementById('pc-copy').style.display = 'inline-flex';
+  document.getElementById('pc-log').style.display = 'inline-flex';
+  switchTab('postcreator', document.querySelector('.tab:last-child'));
+}
+
+// Populate post creator client select
+function populatePostCreatorClients() {
+  const sel = document.getElementById('pc-client');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— Select client —</option>';
+  clients.forEach(c => {
+    const o = document.createElement('option');
+    o.value = c.id; o.textContent = c.name; sel.appendChild(o);
+  });
 }
 
 loadAll();
