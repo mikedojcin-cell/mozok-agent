@@ -86,7 +86,7 @@ app.post('/api/graph', async (req, res) => {
   if (action === 'getContacts') {
     const { status } = req.body;
     try {
-      const data = await supabase('GET', `/rest/v1/contacts?status=eq.${status}&order=created_at.desc&limit=100`);
+      const data = await supabase('GET', `/rest/v1/contacts?status=eq.${status}&email=neq.&order=created_at.desc&limit=100`);
       return res.json({ results: Array.isArray(data) ? data : [], total: Array.isArray(data) ? data.length : 0 });
     } catch(e) { return res.json({ error: e.message }); }
   }
