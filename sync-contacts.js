@@ -4,12 +4,12 @@ const APOLLO_KEY = process.env.APOLLO_KEY;
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 
-function apolloRequest(body) {
+function apolloRequest(path, body) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const options = {
       hostname: 'api.apollo.io',
-      path: '/v1/mixed_people/api_search',
+      path,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -29,6 +29,27 @@ function apolloRequest(body) {
     req.write(data);
     req.end();
   });
+}
+
+// Enrich a batch of up to 10 people to get emails
+async function enrichBatch(people) {
+  const details = people.map(p => ({
+    id: p.id,
+    first_name: p.first_name,
+    last_name: p.last_name || '',
+    organization_name: p.organization ? p.organization.name : ''
+  }));
+  try {
+    const result = await apolloRequest('/v1/people/bulk_match', {
+      api_key: APOLLO_KEY,
+      details,
+      reveal_personal_emails: false
+    });
+    return result.matches || [];
+  } catch(e) {
+    console.log(`Enrich batch error: ${e.message}`);
+    return [];
+  }
 }
 
 function supabaseRequest(method, path, body) {
@@ -100,7 +121,7 @@ async function syncContacts() {
     const config = SEARCH_CONFIGS[state.config_index % SEARCH_CONFIGS.length];
     console.log(`Searching: ${config.locations.join(', ')} | Titles: ${config.titles.join(', ')} | Page: ${state.page}`);
 
-    const apolloData = await apolloRequest({
+    const apolloData = await apolloRequest('/v1/mixed_people/api_search', {
       api_key: APOLLO_KEY,
       person_titles: config.titles,
       person_locations: config.locations,
@@ -113,29 +134,48 @@ async function syncContacts() {
     if (!apolloData.people || apolloData.people.length === 0) {
       console.log(`Apollo response: ${JSON.stringify(apolloData).substring(0, 300)}`);
       console.log(`No contacts on page ${state.page} for this config. Moving to next location.`);
-      // Advance to next config, reset page
       state = { config_index: (state.config_index + 1) % SEARCH_CONFIGS.length, page: 1 };
       await savePageTracker(state);
       console.log(`Next run will use config_index=${state.config_index}`);
       return;
     }
 
-    console.log(`Fetched ${apolloData.people.length} contacts from Apollo.`);
+    console.log(`Fetched ${apolloData.people.length} contacts from Apollo. Enriching for emails...`);
 
-    const contacts = apolloData.people.map(p => ({
-      apollo_id: p.id,
-      firstname: p.first_name || '',
-      lastname: p.last_name || '',
-      email: p.email || '',
-      company: p.organization ? p.organization.name : '',
-      phone: p.phone_numbers && p.phone_numbers[0] ? p.phone_numbers[0].raw_number : '',
-      linkedin: p.linkedin_url || '',
-      city: p.city || '',
-      state: p.state || '',
-      country: p.country || '',
-      status: 'NEW',
-      last_synced: new Date().toISOString()
-    }));
+    // Enrich in batches of 10 to get emails
+    const enriched = [];
+    for (let i = 0; i < apolloData.people.length; i += 10) {
+      const batch = apolloData.people.slice(i, i + 10);
+      const matches = await enrichBatch(batch);
+      enriched.push(...matches);
+      console.log(`Enriched batch ${Math.floor(i/10)+1}: ${matches.length} matches`);
+    }
+
+    // Build email map from enriched results
+    const emailMap = {};
+    for (const m of enriched) {
+      if (m.id && m.email) emailMap[m.id] = m.email;
+    }
+
+    // Only keep contacts that have emails
+    const contacts = apolloData.people
+      .filter(p => emailMap[p.id])
+      .map(p => ({
+        apollo_id: p.id,
+        firstname: p.first_name || '',
+        lastname: p.last_name || '',
+        email: emailMap[p.id],
+        company: p.organization ? p.organization.name : '',
+        phone: p.phone_numbers && p.phone_numbers[0] ? p.phone_numbers[0].raw_number : '',
+        linkedin: p.linkedin_url || '',
+        city: p.city || '',
+        state: p.state || '',
+        country: p.country || '',
+        status: 'NEW',
+        last_synced: new Date().toISOString()
+      }));
+
+    console.log(`${contacts.length} contacts have verified emails.`);
 
     const result = await supabaseRequest('POST', '/rest/v1/contacts?on_conflict=apollo_id', contacts);
     console.log(`Supabase status: ${result.status}`);
