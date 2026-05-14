@@ -941,20 +941,15 @@ async function generatePost(variationType = null) {
     : buildPostPrompt();
 
   try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://mozok-agent.onrender.com/api/generate-post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ prompt })
     });
 
     const data = await response.json();
-    const postText = data.content?.[0]?.text || '';
-
-    if (!postText) throw new Error('No content returned');
+    const postText = data.text || '';
+    if (!postText) throw new Error(data.error || 'No content returned');
 
     lastPostGenerated = postText;
 
