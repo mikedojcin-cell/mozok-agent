@@ -510,7 +510,18 @@ function renderDetailPanel() {
             </div>`).join('') : '<div style="font-size:13px;color:var(--text-3);padding:0.5rem 0;">No checklist items.</div>'}
         </div>
         <div>
-          <div class="sec-label">Recent posts</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div class="sec-label" style="margin:0;">Recent posts</div>
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="connectMeta('${c.id}')">
+                <i class="ti ti-brand-facebook"></i> Connect Facebook
+              </button>
+              <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="syncMeta('${c.id}')">
+                <i class="ti ti-refresh"></i> Sync
+              </button>
+            </div>
+          </div>
+          <div id="sync-status-${c.id}" style="font-size:12px;color:var(--moz);margin-bottom:8px;display:none;"></div>
           <table class="tbl" style="table-layout:fixed;">
             <thead><tr><th style="width:40%">Post</th><th>Platform</th><th>Impr.</th><th>Eng%</th><th>Leads</th></tr></thead>
             <tbody>
@@ -520,7 +531,7 @@ function renderDetailPanel() {
                 <td style="font-weight:500;">${p.impressions.toLocaleString()}</td>
                 <td style="font-weight:500;">${p.engagement}%</td>
                 <td><span class="ldot ${p.leads>0?'ldot-yes':'ldot-no'}"></span>${p.leads}</td>
-              </tr>`).join('') : '<tr><td colspan="5" style="font-size:13px;color:var(--text-3);padding:0.75rem 0;">No posts yet.</td></tr>'}
+              </tr>`).join('') : '<tr><td colspan="5" style="font-size:13px;color:var(--text-3);padding:0.75rem 0;">No posts yet. Click Sync to pull from Facebook.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -651,6 +662,55 @@ async function addLead() {
   document.getElementById('nl-contact').value = '';
   document.getElementById('nl-value').value = '';
   refreshAll();
+}
+
+function connectMeta(clientId) {
+  window.open(`/auth/meta?clientId=${clientId}`, '_blank', 'width=600,height=700');
+}
+
+async function syncMeta(clientId) {
+  const statusEl = document.getElementById(`sync-status-${clientId}`);
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = 'Syncing from Facebook...'; }
+  try {
+    const res = await fetch(`/api/meta/insights/${clientId}`);
+    const data = await res.json();
+    if (data.error) {
+      if (statusEl) statusEl.textContent = '⚠ ' + data.error;
+      return;
+    }
+    let added = 0;
+    if (data.posts && data.posts.length) {
+      for (const p of data.posts) {
+        const impressions = p.insights?.data?.find(d => d.name === 'post_impressions')?.values?.[0]?.value || 0;
+        const engaged = p.insights?.data?.find(d => d.name === 'post_engaged_users')?.values?.[0]?.value || 0;
+        const engagement = impressions > 0 ? parseFloat((engaged / impressions * 100).toFixed(1)) : 0;
+        const content = p.message ? p.message.substring(0, 100) : 'Facebook post';
+        const post_date = p.created_time ? new Date(p.created_time).toLocaleDateString('en-CA',{month:'short',day:'numeric'}) : 'Recent';
+        const [newPost] = await supa('POST','posts',{
+          client_id: clientId,
+          content,
+          platform: 'Facebook',
+          post_date,
+          impressions,
+          engagement,
+          leads: 0
+        });
+        posts.unshift(newPost);
+        added++;
+      }
+    }
+    if (statusEl) statusEl.textContent = `✓ Synced ${added} posts from Facebook`;
+    refreshAll();
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '⚠ Sync failed: ' + e.message;
+  }
+}
+
+// Check if returning from Meta OAuth
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('connected') === 'true') {
+  window.history.replaceState({}, '', '/dashboard.html');
+  setTimeout(() => alert('Facebook connected successfully!'), 500);
 }
 
 loadAll();
