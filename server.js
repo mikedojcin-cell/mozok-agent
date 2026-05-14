@@ -373,7 +373,7 @@ app.post('/api/generate-post', async (req, res) => {
     });
 
     const result = await new Promise((resolve, reject) => {
-      const req = https.request({
+      const apiReq = https.request({
         hostname: 'api.anthropic.com',
         path: '/v1/messages',
         method: 'POST',
@@ -386,17 +386,26 @@ app.post('/api/generate-post', async (req, res) => {
       }, r => {
         let d = '';
         r.on('data', c => d += c);
-        r.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+        r.on('end', () => { 
+          console.log('Anthropic response status:', r.statusCode);
+          console.log('Anthropic response body:', d.substring(0, 500));
+          try { resolve(JSON.parse(d)); } catch(e) { reject(e); } 
+        });
       });
-      req.on('error', reject);
-      req.write(data);
-      req.end();
+      apiReq.on('error', reject);
+      apiReq.write(data);
+      apiReq.end();
     });
 
     const text = result.content?.[0]?.text || '';
-    if (!text) return res.json({ error: 'No content returned from Claude' });
+    if (!text) {
+      const errMsg = result.error?.message || JSON.stringify(result);
+      console.log('No text returned:', errMsg);
+      return res.json({ error: errMsg });
+    }
     res.json({ text });
   } catch(e) {
+    console.log('Generate post error:', e.message);
     res.json({ error: e.message });
   }
 });
