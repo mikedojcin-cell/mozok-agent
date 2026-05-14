@@ -31,46 +31,69 @@
   .green { background: #107c10; color: #fff; } .green:hover { background: #0e6b0e; }
   .orange { background: #ca5010; color: #fff; } .orange:hover { background: #b04000; }
   .grey { background: #2a2f3d; color: #ccc; }
+  .red { background: #c50f1f; color: #fff; }
   .log { background: #0a0d14; border: 1px solid #1e2335; border-radius: 8px; padding: 14px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; margin-top: 14px; display: none; }
   .ls { color: #6ccb5f; } .le { color: #e74c3c; } .li { color: #4fa3e0; }
   .form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .qt-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 10px; margin-bottom: 16px; }
-  .qt { background: #0f1420; border: 1px solid #2a2f3d; border-radius: 8px; padding: 12px; cursor: pointer; }
-  .qt:hover { border-color: #0078d4; }
-  .qt-i { font-size: 18px; margin-bottom: 6px; }
-  .qt-t { font-weight: 600; color: #ccc; font-size: 12px; }
-  .qt-d { color: #666; font-size: 11px; }
-  .rday { padding: 5px 12px; border-radius: 15px; border: 1px solid #2a2f3d; background: #0f1420; color: #888; font-size: 12px; cursor: pointer; }
-  .rday.on { background: #0d2040; border-color: #0078d4; color: #4fa3e0; }
-  .rdays { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .ti { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #0f1420; border-radius: 7px; margin-bottom: 8px; border: 1px solid #2a2f3d; }
-  .ti-c { flex: 1; } .ti-t { font-size: 13px; color: #ccc; } .ti-m { font-size: 11px; color: #555; margin-top: 2px; }
   .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.2); border-top-color: #fff; border-radius: 50%; animation: sp .7s linear infinite; }
   @keyframes sp { to { transform: rotate(360deg); } }
   .info { background: #0d2040; border: 1px solid #0078d4; color: #4fa3e0; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
   .warn { background: #2b1800; border: 1px solid #ca5010; color: #f7ba1e; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
-  /* Email section styles */
+
+  /* PIPELINE */
+  .pipeline-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .pipe-col { background: #1a1f2e; border: 1px solid #2a2f3d; border-radius: 10px; padding: 14px; }
+  .pipe-col-header { font-size: 12px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .pipe-count { font-size: 20px; font-weight: 700; }
+  .pipe-label { font-size: 11px; color: #666; margin-top: 2px; }
+  .pipe-contact { background: #0f1420; border: 1px solid #2a2f3d; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font-size: 12px; cursor: pointer; transition: border-color 0.15s; }
+  .pipe-contact:hover { border-color: #0078d4; }
+  .pipe-name { color: #ccc; font-weight: 500; }
+  .pipe-company { color: #555; font-size: 11px; margin-top: 2px; }
+  .pipe-meta { color: #4fa3e0; font-size: 10px; margin-top: 3px; }
+  .pipe-opened { color: #6ccb5f; font-size: 10px; margin-top: 3px; }
+
+  /* STATS */
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 18px; }
+  .stat-box { background: #1a1f2e; border: 1px solid #2a2f3d; border-radius: 8px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 24px; font-weight: 700; color: #4fa3e0; }
+  .stat-lbl { font-size: 11px; color: #666; margin-top: 4px; }
+  .stat-num.green { color: #6ccb5f; }
+  .stat-num.orange { color: #f7ba1e; }
+  .stat-num.red { color: #e74c3c; }
+
+  /* EMAIL TABLE */
   .contact-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .contact-table th { text-align: left; padding: 8px 12px; color: #666; font-weight: 600; font-size: 11px; text-transform: uppercase; border-bottom: 1px solid #2a2f3d; }
   .contact-table td { padding: 10px 12px; border-bottom: 1px solid #1a1f2e; vertical-align: middle; }
   .contact-table tr:hover td { background: #1a1f2e; }
-  .contact-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
   .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
   .badge-new { background: #0d2040; color: #4fa3e0; }
   .badge-e1 { background: #1a2b00; color: #6ccb5f; }
   .badge-e2 { background: #2b1800; color: #f7ba1e; }
   .badge-e3 { background: #2b0000; color: #e74c3c; }
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
-  .stat-box { background: #1a1f2e; border: 1px solid #2a2f3d; border-radius: 8px; padding: 14px; text-align: center; }
-  .stat-num { font-size: 24px; font-weight: 700; color: #4fa3e0; }
-  .stat-lbl { font-size: 11px; color: #666; margin-top: 4px; }
+  .badge-opened { background: #0d2b0d; color: #6ccb5f; }
+  .badge-due { background: #2b1800; color: #f7ba1e; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+
   .select-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
   .select-bar select { width: auto; }
+
+  .ti { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #0f1420; border-radius: 7px; margin-bottom: 8px; border: 1px solid #2a2f3d; }
+  .ti-c { flex: 1; } .ti-t { font-size: 13px; color: #ccc; } .ti-m { font-size: 11px; color: #555; margin-top: 2px; }
+
+  .qt-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(160px,1fr)); gap: 10px; margin-bottom: 16px; }
+  .qt { background: #0f1420; border: 1px solid #2a2f3d; border-radius: 8px; padding: 12px; cursor: pointer; }
+  .qt:hover { border-color: #0078d4; }
+  .qt-i { font-size: 18px; margin-bottom: 6px; } .qt-t { font-weight: 600; color: #ccc; font-size: 12px; } .qt-d { color: #666; font-size: 11px; }
+  .rday { padding: 5px 12px; border-radius: 15px; border: 1px solid #2a2f3d; background: #0f1420; color: #888; font-size: 12px; cursor: pointer; }
+  .rday.on { background: #0d2040; border-color: #0078d4; color: #4fa3e0; }
+  .rdays { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 <div class="header">
-  <div><div class="logo">⚡ Mozok Outlook Agent</div><div class="sub">Microsoft 365 Task & Email Automation</div></div>
+  <div><div class="logo">⚡ Mozok Outlook Agent</div><div class="sub">Email Pipeline & Automation</div></div>
   <div id="statusBadge">● Not Connected</div>
 </div>
 <div class="container">
@@ -78,6 +101,7 @@
     <div class="sec">Setup</div>
     <div class="nav active" onclick="show('auth')" id="nav-auth">🔐 Connect Outlook</div>
     <div class="sec" style="margin-top:16px">Outreach</div>
+    <div class="nav" onclick="show('pipeline')" id="nav-pipeline">📊 Pipeline</div>
     <div class="nav" onclick="show('email')" id="nav-email">📧 Send Emails</div>
     <div class="sec" style="margin-top:16px">Tasks</div>
     <div class="nav" onclick="show('tasks')" id="nav-tasks">✅ Create Tasks</div>
@@ -101,9 +125,49 @@
       </div>
     </div>
 
+    <!-- PIPELINE -->
+    <div class="panel" id="panel-pipeline">
+      <div class="stats-row" id="pipeStats">
+        <div class="stat-box"><div class="stat-num" id="ps-total">-</div><div class="stat-lbl">Total Contacts</div></div>
+        <div class="stat-box"><div class="stat-num orange" id="ps-due">-</div><div class="stat-lbl">Follow-Up Due</div></div>
+        <div class="stat-box"><div class="stat-num green" id="ps-opened">-</div><div class="stat-lbl">Opened Email</div></div>
+        <div class="stat-box"><div class="stat-num" id="ps-e1">-</div><div class="stat-lbl">Email 1 Sent</div></div>
+        <div class="stat-box"><div class="stat-num" id="ps-done">-</div><div class="stat-lbl">Sequence Done</div></div>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="font-size:15px;font-weight:600;color:#fff;">Live Pipeline</div>
+        <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="loadPipeline()">🔄 Refresh</button>
+      </div>
+
+      <div class="pipeline-grid" id="pipelineGrid">
+        <div class="pipe-col">
+          <div class="pipe-col-header" style="color:#4fa3e0;">🆕 Ready to Send<span id="pc-ready" class="pipe-count">-</span></div>
+          <div id="pl-ready"><div style="color:#555;font-size:12px">Loading...</div></div>
+        </div>
+        <div class="pipe-col">
+          <div class="pipe-col-header" style="color:#6ccb5f;">📨 Email 1 Sent<span id="pc-e1" class="pipe-count">-</span></div>
+          <div id="pl-e1"><div style="color:#555;font-size:12px">Loading...</div></div>
+        </div>
+        <div class="pipe-col">
+          <div class="pipe-col-header" style="color:#f7ba1e;">⏰ Follow-Up Due<span id="pc-due" class="pipe-count">-</span></div>
+          <div id="pl-due"><div style="color:#555;font-size:12px">Loading...</div></div>
+        </div>
+        <div class="pipe-col">
+          <div class="pipe-col-header" style="color:#6ccb5f;">👁 Opened Email<span id="pc-opened" class="pipe-count">-</span></div>
+          <div id="pl-opened"><div style="color:#555;font-size:12px">Loading...</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🔥 Action Required</h3>
+        <div id="actionRequired"><div style="color:#555;font-size:13px">Loading...</div></div>
+      </div>
+    </div>
+
     <!-- EMAIL OUTREACH -->
     <div class="panel" id="panel-email">
-      <div class="stats-row" id="emailStats">
+      <div class="stats-row" id="emailStats" style="grid-template-columns:repeat(4,1fr)">
         <div class="stat-box"><div class="stat-num" id="stat-new">-</div><div class="stat-lbl">Ready to Send</div></div>
         <div class="stat-box"><div class="stat-num" id="stat-e1">-</div><div class="stat-lbl">Email 1 Sent</div></div>
         <div class="stat-box"><div class="stat-num" id="stat-e2">-</div><div class="stat-lbl">Email 2 Sent</div></div>
@@ -113,10 +177,10 @@
       <div class="card">
         <h3>📧 Email Queue</h3>
         <div class="select-bar">
-          <select id="emailFilter" onchange="filterContacts()">
+          <select id="emailFilter" onchange="loadContacts()">
             <option value="NEW">🆕 New Contacts (Email 1)</option>
-            <option value="EMAIL_1_SENT">📨 Follow-Up Due (Email 2)</option>
-            <option value="EMAIL_2_SENT">📨 Final Follow-Up (Email 3)</option>
+            <option value="EMAIL_1_SENT_DUE">⏰ Follow-Up Due (Email 2)</option>
+            <option value="EMAIL_2_SENT_DUE">⏰ Final Follow-Up Due (Email 3)</option>
           </select>
           <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="loadContacts()">🔄 Refresh</button>
           <button class="btn grey" style="margin-top:0;padding:7px 14px" onclick="selectAll()">☑ Select All</button>
@@ -128,10 +192,7 @@
           <table class="contact-table">
             <thead><tr>
               <th style="width:36px"><input type="checkbox" id="masterCheck" onchange="masterToggle(this)"></th>
-              <th>Name</th>
-              <th>Company</th>
-              <th>Email</th>
-              <th>Status</th>
+              <th>Name</th><th>Company</th><th>Email</th><th>Status</th><th>Opened</th><th></th>
             </tr></thead>
             <tbody id="contactRows"></tbody>
           </table>
@@ -147,16 +208,16 @@
       <div class="card">
         <h3>✉️ Email Templates</h3>
         <div style="margin-bottom:12px">
-          <div style="font-size:12px;color:#4fa3e0;font-weight:600;margin-bottom:6px">EMAIL 1 — Cold Outreach</div>
-          <div style="font-size:12px;color:#888;line-height:1.6">Subject: quick question, ${firstName}<br>Hi [First Name], Most business owners know they should be more active on social media — they just never get around to it...<br>Plans start at $497/month. Worth a 15-minute call?</div>
+          <div style="font-size:12px;color:#4fa3e0;font-weight:600;margin-bottom:6px">EMAIL 1 — Cold Outreach (Day 1)</div>
+          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> quick question, [First Name]<br>Most business owners know they should be more active on social media — they just never get around to it. Plans start at $497/month. Worth a 15-minute call?</div>
         </div>
         <div style="margin-bottom:12px;border-top:1px solid #2a2f3d;padding-top:12px">
-          <div style="font-size:12px;color:#f7ba1e;font-weight:600;margin-bottom:6px">EMAIL 2 — Follow Up (Day 5)</div>
-          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Re: quick question, ${firstName}<br>Just circling back on my note from earlier this week...</div>
+          <div style="font-size:12px;color:#f7ba1e;font-weight:600;margin-bottom:6px">EMAIL 2 — Follow Up (Day 5 — auto-queued)</div>
+          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> Re: quick question, [First Name]<br>Just circling back — if social media has been on your list but keeps getting pushed, that's exactly who Mozok is built for.</div>
         </div>
         <div style="border-top:1px solid #2a2f3d;padding-top:12px">
-          <div style="font-size:12px;color:#e74c3c;font-weight:600;margin-bottom:6px">EMAIL 3 — Final (Day 10)</div>
-          <div style="font-size:12px;color:#888;line-height:1.6">Subject: Last note — [Company]<br>I'll keep this short — last note from me...</div>
+          <div style="font-size:12px;color:#e74c3c;font-weight:600;margin-bottom:6px">EMAIL 3 — Final (Day 10 — auto-queued)</div>
+          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> Last note — [First Name]<br>Last note from me. If timing isn't right, no worries — we're at mozok.co whenever you're ready.</div>
         </div>
       </div>
     </div>
@@ -166,11 +227,11 @@
       <div class="card">
         <h3>⚡ Quick Tasks</h3>
         <div class="qt-grid">
-          <div class="qt" onclick="qt('Send Mozok Cold Emails — Batch of 10','Send 10 cold emails via HubSpot. Best: Tue/Wed/Thu 8–9am.')"><div class="qt-i">📧</div><div class="qt-t">Cold Emails</div><div class="qt-d">Batch of 10</div></div>
+          <div class="qt" onclick="qt('Send Mozok Cold Emails — Batch of 10','Send 10 cold emails. Best: Tue/Wed/Thu 8–9am.')"><div class="qt-i">📧</div><div class="qt-t">Cold Emails</div><div class="qt-d">Batch of 10</div></div>
           <div class="qt" onclick="qt('Follow-Up Calls — Warm Mozok Leads','Call leads who opened emails. Best: 4–5:30pm.')"><div class="qt-i">📞</div><div class="qt-t">Follow-Up Calls</div><div class="qt-d">Warm leads</div></div>
           <div class="qt" onclick="qt('Write & Post Mozok LinkedIn Content','Write one text-only post. Rotate: problem, tip, proof, BTS.')"><div class="qt-i">✍️</div><div class="qt-t">LinkedIn Post</div><div class="qt-d">Mozok content</div></div>
           <div class="qt" onclick="qt('Ramstar Follow-Up — JJ Tools / Reps','Review open action items. Follow up with Don Noble / Bobby.')"><div class="qt-i">🔧</div><div class="qt-t">Ramstar Follow-Up</div><div class="qt-d">JJ Tools / reps</div></div>
-          <div class="qt" onclick="qt('Mozok Weekly Pipeline Review','Check HubSpot opens, replies, booked calls. Update forecast.')"><div class="qt-i">📊</div><div class="qt-t">Pipeline Review</div><div class="qt-d">Weekly check</div></div>
+          <div class="qt" onclick="qt('Mozok Weekly Pipeline Review','Check pipeline opens, replies, booked calls. Update forecast.')"><div class="qt-i">📊</div><div class="qt-t">Pipeline Review</div><div class="qt-d">Weekly check</div></div>
           <div class="qt" onclick="qt('','')"><div class="qt-i">➕</div><div class="qt-t">Custom Task</div><div class="qt-d">Anything</div></div>
         </div>
       </div>
@@ -199,11 +260,11 @@
         <label>Title</label><input id="rt" placeholder="e.g. Send Mozok cold emails">
         <label style="margin-top:14px">Repeat On</label>
         <div class="rdays">
-          <div class="rday" onclick="td(this,'Mon')">Mon</div>
-          <div class="rday" onclick="td(this,'Tue')">Tue</div>
-          <div class="rday" onclick="td(this,'Wed')">Wed</div>
-          <div class="rday" onclick="td(this,'Thu')">Thu</div>
-          <div class="rday" onclick="td(this,'Fri')">Fri</div>
+          <div class="rday" onclick="rdToggle(this,'Mon')">Mon</div>
+          <div class="rday" onclick="rdToggle(this,'Tue')">Tue</div>
+          <div class="rday" onclick="rdToggle(this,'Wed')">Wed</div>
+          <div class="rday" onclick="rdToggle(this,'Thu')">Thu</div>
+          <div class="rday" onclick="rdToggle(this,'Fri')">Fri</div>
         </div>
         <div class="form2" style="margin-top:14px">
           <div><label>Time</label><input type="time" id="rtm" value="08:00"></div>
@@ -256,10 +317,11 @@
 </div>
 <script>
 const RENDER_API = 'https://mozok-agent.onrender.com/api/graph';
+const PIPELINE_API = 'https://mozok-agent.onrender.com/api/pipeline';
 
 let listId = '';
 let connected = false;
-let days = [];
+let rdDays = [];
 let stasks = [];
 let allContacts = [];
 
@@ -268,16 +330,16 @@ const cid = () => document.getElementById('cid').value.trim();
 const cs  = () => document.getElementById('cs').value.trim();
 const em  = () => document.getElementById('em').value.trim();
 
-// ── Nav ──────────────────────────────────────────────────────────────────────
 function show(n) {
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav').forEach(v=>v.classList.remove('active'));
   document.getElementById('panel-'+n).classList.add('active');
   document.getElementById('nav-'+n).classList.add('active');
   if(n==='email') loadContacts();
+  if(n==='pipeline') loadPipeline();
 }
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── AUTH ──────────────────────────────────────────────────────────────────────
 async function connect() {
   slog('alog'); sp('asp',1);
   log('alog','i','→ Connecting to Microsoft via Render...');
@@ -303,16 +365,71 @@ async function callRender(action, extra={}) {
   return r.json();
 }
 
-// ── HubSpot (via Render) ─────────────────────────────────────────────────────
-async function hsPost(status) {
-  return callRender('getContacts', { status });
+// ── PIPELINE ──────────────────────────────────────────────────────────────────
+async function loadPipeline() {
+  try {
+    const data = await fetch(PIPELINE_API).then(r=>r.json());
+    if (data.error) { console.error(data.error); return; }
+    const p = data.pipeline;
+
+    // Update stats
+    const due = (p.email2_due||[]).length + (p.email3_due||[]).length;
+    document.getElementById('ps-total').textContent = data.total;
+    document.getElementById('ps-due').textContent = due;
+    document.getElementById('ps-opened').textContent = (p.opened||[]).length;
+    document.getElementById('ps-e1').textContent = (p.email1_sent||[]).length;
+    document.getElementById('ps-done').textContent = (p.email3_sent||[]).length;
+
+    // Update counts
+    document.getElementById('pc-ready').textContent = (p.ready||[]).length;
+    document.getElementById('pc-e1').textContent = (p.email1_sent||[]).length;
+    document.getElementById('pc-due').textContent = due;
+    document.getElementById('pc-opened').textContent = (p.opened||[]).length;
+
+    // Render columns
+    renderPipeCol('pl-ready', p.ready||[], 'ready');
+    renderPipeCol('pl-e1', p.email1_sent||[], 'e1');
+    const dueAll = [...(p.email2_due||[]), ...(p.email3_due||[])];
+    renderPipeCol('pl-due', dueAll, 'due');
+    renderPipeCol('pl-opened', p.opened||[], 'opened');
+
+    // Action required
+    renderActions(dueAll, p.opened||[]);
+
+  } catch(e) { console.error('Pipeline error:', e); }
 }
 
-async function hsPatch(id, props) {
-  return callRender('updateContact', { contactId: id, props });
+function renderPipeCol(elId, contacts, type) {
+  const el = document.getElementById(elId);
+  if (!contacts.length) { el.innerHTML = '<div style="color:#555;font-size:11px;padding:4px">None</div>'; return; }
+  el.innerHTML = contacts.slice(0,8).map(c => {
+    const name = `${c.firstname||''} ${c.lastname||''}`.trim();
+    const daysAgo = c.email1_sent_at ? Math.floor((Date.now()-new Date(c.email1_sent_at))/86400000) : null;
+    const openMeta = c.open_count > 0 ? `<div class="pipe-opened">👁 Opened ${c.open_count}x — ${c.last_opened_at ? new Date(c.last_opened_at).toLocaleDateString() : ''}</div>` : '';
+    const timeMeta = daysAgo !== null ? `<div class="pipe-meta">Email 1 sent ${daysAgo}d ago</div>` : '';
+    return `<div class="pipe-contact">
+      <div class="pipe-name">${name}</div>
+      <div class="pipe-company">${c.company||''}</div>
+      ${timeMeta}${openMeta}
+    </div>`;
+  }).join('');
+  if (contacts.length > 8) el.innerHTML += `<div style="color:#555;font-size:11px;padding:4px">+${contacts.length-8} more</div>`;
 }
 
-// ── Load Contacts ─────────────────────────────────────────────────────────────
+function renderActions(due, opened) {
+  const el = document.getElementById('actionRequired');
+  let html = '';
+  if (opened.length) {
+    html += `<div class="warn" style="margin-bottom:10px">🔥 ${opened.length} contact${opened.length>1?'s':''} opened your email — call them today! <button class="btn orange" style="margin-top:0;padding:5px 12px;margin-left:10px;font-size:12px" onclick="show('email');document.getElementById('emailFilter').value='EMAIL_1_SENT_DUE';loadContacts()">View & Send Email 2 →</button></div>`;
+  }
+  if (due.length) {
+    html += `<div class="info" style="margin-bottom:10px">⏰ ${due.length} contact${due.length>1?'s':''} ready for follow-up email — ${due.length > 5 ? 'more than 5 days since last email' : 'send today'}. <button class="btn blue" style="margin-top:0;padding:5px 12px;margin-left:10px;font-size:12px" onclick="show('email');document.getElementById('emailFilter').value='EMAIL_1_SENT_DUE';loadContacts()">Send Follow-Up →</button></div>`;
+  }
+  if (!html) html = '<div style="color:#555;font-size:13px">No actions required right now. Keep sending Email 1 to new contacts.</div>';
+  el.innerHTML = html;
+}
+
+// ── LOAD CONTACTS ─────────────────────────────────────────────────────────────
 async function loadContacts() {
   const filter = document.getElementById('emailFilter').value;
   document.getElementById('contactsLoading').textContent = 'Loading contacts...';
@@ -320,53 +437,57 @@ async function loadContacts() {
   document.getElementById('contactsTable').style.display = 'none';
 
   try {
-    const res = await hsPost(filter);
+    // Load from pipeline API for accurate due dates
+    const data = await fetch(PIPELINE_API).then(r=>r.json());
+    const p = data.pipeline || {};
 
-    allContacts = (res.results || []).filter(c => {
-      const status = c.status;
-      // For follow-ups, only show if enough days have passed
-      if (status === 'EMAIL_1_SENT' && c.email1_sent_date) {
-        const sent = new Date(c.email1_sent_date);
-        const daysSince = (Date.now() - sent) / 86400000;
-        return daysSince >= 5;
-      }
-      if (status === 'EMAIL_2_SENT' && c.email2_sent_date) {
-        const sent = new Date(c.email2_sent_date);
-        const daysSince = (Date.now() - sent) / 86400000;
-        return daysSince >= 5;
-      }
-      return true;
-    });
+    // Update stats
+    document.getElementById('stat-new').textContent = (p.ready||[]).length;
+    document.getElementById('stat-e1').textContent = (p.email1_sent||[]).length;
+    document.getElementById('stat-e2').textContent = (p.email2_sent||[]).length;
+    document.getElementById('stat-e3').textContent = (p.email3_sent||[]).length;
 
-    renderContacts();
+    if (filter === 'NEW') {
+      allContacts = p.ready || [];
+    } else if (filter === 'EMAIL_1_SENT_DUE') {
+      allContacts = p.email2_due || [];
+    } else if (filter === 'EMAIL_2_SENT_DUE') {
+      allContacts = p.email3_due || [];
+    }
+
+    renderContacts(filter);
   } catch(e) {
-    document.getElementById('contactsLoading').textContent = 'Error loading contacts: ' + e.message;
+    document.getElementById('contactsLoading').textContent = 'Error: ' + e.message;
   }
 }
 
-function filterContacts() { loadContacts(); }
-
-function renderContacts() {
+function renderContacts(filter) {
   const tbody = document.getElementById('contactRows');
   if (!allContacts.length) {
-    document.getElementById('contactsLoading').textContent = 'No contacts ready for this email stage.';
+    document.getElementById('contactsLoading').textContent = filter === 'NEW'
+      ? 'No new contacts. Apollo is pulling 100/day automatically.'
+      : 'No follow-ups due yet. Come back in a few days.';
     document.getElementById('contactsLoading').style.display = 'block';
     document.getElementById('contactsTable').style.display = 'none';
     return;
   }
 
-  const statusBadge = { NEW:'badge-new', EMAIL_1_SENT:'badge-e1', EMAIL_2_SENT:'badge-e2', EMAIL_3_SENT:'badge-e3' };
-  const statusLabel = { NEW:'New', EMAIL_1_SENT:'Email 1 Sent', EMAIL_2_SENT:'Email 2 Sent', EMAIL_3_SENT:'Email 3 Sent' };
-
   tbody.innerHTML = allContacts.map((c,i) => {
-    const status = c.status || 'NEW';
+    const openBadge = c.open_count > 0
+      ? `<span class="badge badge-opened">👁 Opened ${c.open_count}x</span>`
+      : '<span style="color:#555;font-size:11px">—</span>';
+    const daysAgo = c.email1_sent_at ? Math.floor((Date.now()-new Date(c.email1_sent_at))/86400000) : null;
+    const statusBadge = c.status === 'EMAIL_1_SENT'
+      ? `<span class="badge badge-due">⏰ Due (${daysAgo}d)</span>`
+      : `<span class="badge badge-new">🆕 New</span>`;
     return `<tr>
       <td><input type="checkbox" class="contact-cb" data-idx="${i}" onchange="updateCount()"></td>
       <td>${c.firstname||''} ${c.lastname||''}</td>
       <td style="color:#888">${c.company||''}</td>
-      <td style="color:#4fa3e0">${c.email||''}</td>
-      <td><span class="badge ${statusBadge[status]||'badge-new'}">${statusLabel[status]||status}</span></td>
-      <td><button onclick="removeContact(${i})" style="background:#2a2f3d;border:none;color:#e74c3c;cursor:pointer;padding:4px 10px;border-radius:4px;font-size:11px">✕ Remove</button></td>
+      <td style="color:#4fa3e0;font-size:12px">${c.email||''}</td>
+      <td>${statusBadge}</td>
+      <td>${openBadge}</td>
+      <td><button onclick="removeContact(${i})" style="background:#2a2f3d;border:none;color:#e74c3c;cursor:pointer;padding:4px 10px;border-radius:4px;font-size:11px">✕</button></td>
     </tr>`;
   }).join('');
 
@@ -376,7 +497,6 @@ function renderContacts() {
 }
 
 function removeContact(idx) {
-  allContacts[idx].status = 'REMOVED';
   callRender('updateContact', { contactId: allContacts[idx].id, props: { status: 'REMOVED' } });
   allContacts.splice(idx, 1);
   renderContacts();
@@ -390,7 +510,7 @@ function updateCount() {
   document.getElementById('selectedCount').textContent = n ? `${n} contact${n>1?'s':''} selected` : '';
 }
 
-// ── Send Emails ───────────────────────────────────────────────────────────────
+// ── SEND EMAILS ───────────────────────────────────────────────────────────────
 async function sendEmails() {
   if (!connected) { alert('Connect to Outlook first.'); return; }
   const selected = [...document.querySelectorAll('.contact-cb:checked')].map(cb => allContacts[parseInt(cb.dataset.idx)]);
@@ -404,7 +524,7 @@ async function sendEmails() {
 
   for (const contact of selected) {
     const firstName = contact.firstname || 'there';
-    const company = contact.company || 'your company';
+    const company = contact.company || 'your business';
     const email = contact.email;
     const isCanadian = (contact.phone||'').includes('226') || (contact.phone||'').includes('519');
     const phone = isCanadian ? '226-214-1660' : '248-800-3405';
@@ -415,32 +535,31 @@ async function sendEmails() {
       subject = `quick question, ${firstName}`;
       body = `Hi ${firstName},\n\nMost business owners I talk to know they should be more active on social media — they just never get around to it.\n\nBetween running the operation and everything else on your plate, it keeps getting pushed to tomorrow.\n\nThat's exactly what Mozok solves. We handle your content, scheduling, and posting across LinkedIn, Facebook, and Instagram every month. You approve by email before anything goes live. That's it.\n\nNo logins. No long-term contracts. Plans start at $497/month.\n\nWorth a 15-minute call?\n\nMike\nmozok.co | ${phone}`;
       newStatus = 'EMAIL_1_SENT';
-      dateField = 'email1_sent_date';
-    } else if (filter === 'EMAIL_1_SENT') {
+      dateField = 'email1_sent_at';
+    } else if (filter === 'EMAIL_1_SENT_DUE') {
       subject = `Re: quick question, ${firstName}`;
       body = `Hi ${firstName},\n\nJust circling back on my note from earlier this week.\n\nIf social media has been on your to-do list but keeps getting pushed — that's exactly who we built Mozok for.\n\nHappy to show you how it works in 15 minutes.\n\nMike\nmozok.co | ${phone}`;
       newStatus = 'EMAIL_2_SENT';
-      dateField = 'email2_sent_date';
+      dateField = 'email2_sent_at';
     } else {
-      subject = `Last note — ${company}`;
+      subject = `Last note — ${firstName}`;
       body = `Hi ${firstName},\n\nI'll keep this short — last note from me.\n\nIf the timing isn't right, no worries at all. If social media ever becomes a priority, we're at mozok.co.\n\nMike\n${phone}`;
       newStatus = 'EMAIL_3_SENT';
-      dateField = 'email3_sent_date';
+      dateField = 'email3_sent_at';
     }
 
     try {
-      // Send via Render backend (Microsoft Graph)
       const r = await callRender('sendEmail', {
         to: email,
         subject,
-        body
+        body,
+        contactId: contact.id
       });
 
       if (r.success || r.status === 202) {
-        // Update HubSpot status
-        await hsPatch(contact.id, {
-            status: newStatus,
-            [dateField]: new Date().toISOString().split('T')[0]
+        await callRender('updateContact', {
+          contactId: contact.id,
+          props: { status: newStatus, [dateField]: new Date().toISOString() }
         });
         sent++;
         log('elog','s',`✓ ${firstName} ${contact.lastname||''} <${email}>`);
@@ -453,7 +572,7 @@ async function sendEmails() {
       log('elog','e',`✗ ${email}: ${e.message}`);
     }
 
-    await new Promise(r=>setTimeout(r,300)); // Small delay between sends
+    await new Promise(r=>setTimeout(r,300));
   }
 
   log('elog','i',`\n📊 Done: ${sent} sent, ${failed} failed`);
@@ -461,7 +580,7 @@ async function sendEmails() {
   if (sent > 0) setTimeout(loadContacts, 1000);
 }
 
-// ── Tasks ────────────────────────────────────────────────────────────────────
+// ── TASKS ─────────────────────────────────────────────────────────────────────
 function qt(title, notes) {
   document.getElementById('tt').value=title;
   document.getElementById('tn').value=notes;
@@ -489,14 +608,14 @@ function renderTasks() {
   el.innerHTML=stasks.map(t=>`<div class="ti"><div style="font-size:16px">✅</div><div class="ti-c"><div class="ti-t">${t.title}</div><div class="ti-m">Due: ${t.due||'No date'}</div></div></div>`).join('');
 }
 
-// ── Recurring ─────────────────────────────────────────────────────────────────
-function td(el,day){el.classList.toggle('on');days=el.classList.contains('on')?[...days,day]:days.filter(d=>d!==day);}
+// ── RECURRING ─────────────────────────────────────────────────────────────────
+function rdToggle(el,day){el.classList.toggle('on');rdDays=el.classList.contains('on')?[...rdDays,day]:rdDays.filter(d=>d!==day);}
 
 function loadMozok(){
   document.getElementById('rt').value='Send Mozok Cold Emails — Batch of 10';
   document.getElementById('rtm').value='08:00';
-  document.getElementById('rn').value='Send 10 cold emails via HubSpot. Best: Tue/Wed/Thu 8–9am.';
-  document.querySelectorAll('.rday').forEach(b=>{if(['Tue','Wed','Thu'].includes(b.textContent)){b.classList.add('on');if(!days.includes(b.textContent))days.push(b.textContent);}});
+  document.getElementById('rn').value='Send 10 cold emails. Best: Tue/Wed/Thu 8–9am.';
+  document.querySelectorAll('.rday').forEach(b=>{if(['Tue','Wed','Thu'].includes(b.textContent)){b.classList.add('on');if(!rdDays.includes(b.textContent))rdDays.push(b.textContent);}});
 }
 
 function getDates(ds,weeks){
@@ -511,13 +630,12 @@ function getDates(ds,weeks){
 
 async function createRecurring(){
   if(!connected){alert('Connect first.');return;}
-  if(!days.length){alert('Select at least one day.');return;}
+  if(!rdDays.length){alert('Select at least one day.');return;}
   const title=document.getElementById('rt').value.trim();
   if(!title){alert('Enter a title.');return;}
   const weeks=parseInt(document.getElementById('rw').value);
-  const time=document.getElementById('rtm').value;
   const notes=document.getElementById('rn').value;
-  const dates=getDates(days,weeks);
+  const dates=getDates(rdDays,weeks);
   slog('rlog');sp('rsp',1);
   log('rlog','i',`→ Creating ${dates.length} tasks...`);
   let count=0;
@@ -532,7 +650,7 @@ async function createRecurring(){
   sp('rsp',0);
 }
 
-// ── Calendar ──────────────────────────────────────────────────────────────────
+// ── CALENDAR ──────────────────────────────────────────────────────────────────
 async function createEvent(){
   if(!connected){alert('Connect first.');return;}
   const title=document.getElementById('ct').value.trim();
@@ -555,14 +673,14 @@ async function createEvent(){
   sp('csp',0);
 }
 
-// ── Playbook ──────────────────────────────────────────────────────────────────
+// ── PLAYBOOK ──────────────────────────────────────────────────────────────────
 async function runPlaybook(){
   if(!connected){alert('Connect first.');return;}
   const items=[
-    {title:'Send Mozok Cold Emails — Batch of 10',days:['Tue','Wed','Thu'],time:'08:00',notes:'Send 10 cold emails via HubSpot.'},
-    {title:'Follow-Up Calls — Warm Mozok Leads',days:['Tue','Wed','Thu'],time:'16:00',notes:'Call leads who opened emails. Best: 4–5:30pm.'},
-    {title:'Write & Post Mozok LinkedIn Content',days:['Wed'],time:'09:00',notes:'Write one text-only LinkedIn post.'},
-    {title:'Mozok Weekly Pipeline Review',days:['Mon'],time:'08:30',notes:'Check HubSpot. Count opens, replies, booked calls.'}
+    {title:'Send Mozok Cold Emails — Batch of 10',days:['Tue','Wed','Thu'],notes:'Send 10 cold emails via the Pipeline tab.'},
+    {title:'Follow-Up Calls — Warm Mozok Leads',days:['Tue','Wed','Thu'],notes:'Call leads who opened emails. Best: 4–5:30pm.'},
+    {title:'Write & Post Mozok LinkedIn Content',days:['Wed'],notes:'Write one text-only LinkedIn post.'},
+    {title:'Mozok Weekly Pipeline Review',days:['Mon'],notes:'Check Pipeline tab. Count opens, follow-ups due, replies.'}
   ];
   slog('plog');sp('psp',1);
   const created={};
@@ -583,7 +701,7 @@ async function runPlaybook(){
   sp('psp',0);
 }
 
-// ── Utils ─────────────────────────────────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────────────────────────────
 function slog(id){const e=document.getElementById(id);e.style.display='block';e.innerHTML='';}
 function log(id,t,m){const e=document.getElementById(id);const d=document.createElement('div');d.className={s:'ls',e:'le',i:'li'}[t];d.textContent=m;e.appendChild(d);e.scrollTop=e.scrollHeight;}
 function sp(id,on){document.getElementById(id).style.display=on?'inline-block':'none';}
