@@ -204,11 +204,7 @@ app.post('/api/graph', async (req, res) => {
 
 app.get('/auth/meta', (req, res) => {
   const { clientId } = req.query;
-  const scope = [
-    'pages_show_list',
-    'pages_read_engagement',
-    'business_management'
-  ].join(',');
+  const scope = 'pages_show_list,business_management';
   const url = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(META_REDIRECT)}&scope=${scope}&state=${clientId}`;
   res.redirect(url);
 });
