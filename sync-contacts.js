@@ -139,7 +139,13 @@ async function syncContacts() {
     }));
 
     const result = await supabaseRequest('POST', '/rest/v1/contacts?on_conflict=apollo_id', contacts);
-    console.log(`✅ Synced ${contacts.length} contacts to Supabase. Status: ${result.status}`);
+    console.log(`Supabase status: ${result.status}`);
+    console.log(`Supabase body: ${JSON.stringify(result.body).substring(0, 500)}`);
+    if (result.status === 200 || result.status === 201) {
+      console.log(`✅ Synced ${contacts.length} contacts to Supabase.`);
+    } else {
+      console.log(`❌ Supabase insert failed - see body above for reason.`);
+    }
 
     // Advance page for next run
     state.page += 1;
