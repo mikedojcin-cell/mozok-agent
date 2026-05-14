@@ -10,6 +10,7 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const META_APP_ID = process.env.META_APP_ID;
 const META_APP_SECRET = process.env.META_APP_SECRET;
 const META_REDIRECT = 'https://mozok-agent.onrender.com/auth/meta/callback';
+const BASE_URL = 'https://mozok-agent.onrender.com';
 
 async function supabase(method, endpoint, body) {
   return new Promise((resolve, reject) => {
@@ -92,6 +93,87 @@ async function metaGet(url) {
   });
 }
 
+// ─── EMAIL OPEN TRACKING ──────────────────────────────────────────────────────
+
+// 1x1 transparent GIF
+const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+
+app.get('/track/open/:contactId', async (req, res) => {
+  const { contactId } = req.params;
+  try {
+    // Log the open event
+    await supabase('POST', '/rest/v1/email_events', {
+      contact_id: contactId,
+      event_type: 'open',
+      metadata: req.headers['user-agent'] || ''
+    });
+    // Update contact open count and last opened
+    await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
+      last_opened_at: new Date().toISOString(),
+      open_count: 1 // Supabase will handle increment via RPC but this sets it
+    });
+    // Increment open count separately
+    const contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=open_count`);
+    const currentCount = contacts[0]?.open_count || 0;
+    await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
+      open_count: currentCount + 1,
+      last_opened_at: new Date().toISOString()
+    });
+  } catch(e) {
+    console.error('Track open error:', e.message);
+  }
+  // Always return the pixel regardless
+  res.writeHead(200, {
+    'Content-Type': 'image/gif',
+    'Content-Length': PIXEL.length,
+    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+    'Pragma': 'no-cache'
+  });
+  res.end(PIXEL);
+});
+
+// ─── EMAIL PIPELINE API ───────────────────────────────────────────────────────
+
+app.get('/api/pipeline', async (req, res) => {
+  try {
+    const [contacts, events] = await Promise.all([
+      supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count'),
+      supabase('GET', '/rest/v1/email_events?order=created_at.desc&limit=200')
+    ]);
+
+    const now = Date.now();
+    const pipeline = {
+      ready: [],
+      email1_sent: [],
+      email2_due: [],
+      email2_sent: [],
+      email3_due: [],
+      email3_sent: [],
+      opened: []
+    };
+
+    for (const c of contacts) {
+      const hasOpened = c.open_count > 0;
+      const e1sent = c.email1_sent_at ? new Date(c.email1_sent_at) : null;
+      const e2sent = c.email2_sent_at ? new Date(c.email2_sent_at) : null;
+      const e1days = e1sent ? (now - e1sent) / 86400000 : null;
+      const e2days = e2sent ? (now - e2sent) / 86400000 : null;
+
+      if (hasOpened) pipeline.opened.push(c);
+      else if (c.status === 'EMAIL_3_SENT') pipeline.email3_sent.push(c);
+      else if (c.status === 'EMAIL_2_SENT' && e2days >= 5) pipeline.email3_due.push(c);
+      else if (c.status === 'EMAIL_2_SENT') pipeline.email2_sent.push(c);
+      else if (c.status === 'EMAIL_1_SENT' && e1days >= 5) pipeline.email2_due.push(c);
+      else if (c.status === 'EMAIL_1_SENT') pipeline.email1_sent.push(c);
+      else pipeline.ready.push(c);
+    }
+
+    res.json({ pipeline, total: contacts.length });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
+
 // ─── SUPABASE CONTACT ROUTES ──────────────────────────────────────────────────
 
 app.post('/api/graph', async (req, res) => {
@@ -130,6 +212,35 @@ app.post('/api/graph', async (req, res) => {
         stats[s] = Array.isArray(data) ? data.length : 0;
       }
       return res.json(stats);
+    } catch(e) { return res.json({ error: e.message }); }
+  }
+
+  if (action === 'sendEmail') {
+    const { to, subject, body: emailBody, contactId } = req.body;
+    try {
+      const tokenRes = await getToken(tenantId, clientId, clientSecret);
+      if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
+      const token = tokenRes.access_token;
+
+      // Add tracking pixel to email body
+      const trackingPixel = contactId
+        ? `\n\n<img src="${BASE_URL}/track/open/${contactId}" width="1" height="1" style="display:none" />`
+        : '';
+
+      const htmlBody = emailBody.replace(/\n/g, '<br>') + trackingPixel;
+
+      const msgBody = {
+        message: {
+          subject,
+          body: { contentType: 'html', content: htmlBody },
+          toRecipients: [{ emailAddress: { address: to } }],
+          from: { emailAddress: { address: userEmail } }
+        },
+        saveToSentItems: true
+      };
+      const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
+      if (r.status === 202) return res.json({ success: true, status: 202 });
+      return res.json({ error: r.data?.error?.message || `Send failed (${r.status})` });
     } catch(e) { return res.json({ error: e.message }); }
   }
 
@@ -176,22 +287,6 @@ app.post('/api/graph', async (req, res) => {
       const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/events`, body);
       if (r.status === 201) return res.json({ success: true });
       return res.json({ error: r.data?.error?.message || 'Event creation failed' });
-    }
-
-    if (action === 'sendEmail') {
-      const { to, subject, body: emailBody } = req.body;
-      const msgBody = {
-        message: {
-          subject,
-          body: { contentType: 'text', content: emailBody },
-          toRecipients: [{ emailAddress: { address: to } }],
-          from: { emailAddress: { address: userEmail } }
-        },
-        saveToSentItems: true
-      };
-      const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
-      if (r.status === 202) return res.json({ success: true, status: 202 });
-      return res.json({ error: r.data?.error?.message || `Send failed (${r.status})` });
     }
 
     return res.json({ error: 'Unknown action' });
@@ -246,24 +341,16 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
     if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
-
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     if (!pages.data || !pages.data.length) return res.json({ error: 'No pages found' });
-
     const page = pages.data[0];
     const pageToken = page.access_token;
     const pageId = page.id;
-
     const [insights, posts] = await Promise.all([
       metaGet(`https://graph.facebook.com/v19.0/${pageId}/insights?metric=page_impressions,page_reach,page_engaged_users&period=month&access_token=${pageToken}`),
       metaGet(`https://graph.facebook.com/v19.0/${pageId}/posts?fields=message,created_time,insights.metric(post_impressions,post_engaged_users)&limit=10&access_token=${pageToken}`)
     ]);
-
-    res.json({
-      page: { id: pageId, name: page.name },
-      insights: insights.data || [],
-      posts: posts.data || []
-    });
+    res.json({ page: { id: pageId, name: page.name }, insights: insights.data || [], posts: posts.data || [] });
   } catch(e) {
     res.json({ error: e.message });
   }
