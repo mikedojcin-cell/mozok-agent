@@ -61,17 +61,18 @@ function supabaseRequest(method, path, body) {
 }
 
 // Location + page configs — cycles through these day by day
+// Uses person_locations (where the person is) not organization_locations
 const SEARCH_CONFIGS = [
   { locations: ['Windsor, Ontario, Canada'], titles: ['owner', 'president', 'ceo', 'founder', 'managing director'] },
-  { locations: ['Essex County, Ontario, Canada', 'Chatham-Kent, Ontario, Canada'], titles: ['owner', 'president', 'ceo', 'founder'] },
+  { locations: ['Windsor, Ontario, Canada'], titles: ['purchasing manager', 'operations manager', 'marketing manager', 'general manager'] },
   { locations: ['Detroit, Michigan, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
-  { locations: ['Ann Arbor, Michigan, United States', 'Ypsilanti, Michigan, United States'], titles: ['owner', 'president', 'ceo'] },
+  { locations: ['Detroit, Michigan, United States'], titles: ['marketing manager', 'marketing director', 'operations manager'] },
+  { locations: ['Ann Arbor, Michigan, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
   { locations: ['Troy, Michigan, United States', 'Sterling Heights, Michigan, United States'], titles: ['owner', 'president', 'ceo'] },
   { locations: ['Dearborn, Michigan, United States', 'Livonia, Michigan, United States'], titles: ['owner', 'president', 'ceo'] },
-  { locations: ['Lansing, Michigan, United States', 'Flint, Michigan, United States'], titles: ['owner', 'president', 'ceo'] },
-  { locations: ['London, Ontario, Canada', 'Sarnia, Ontario, Canada'], titles: ['owner', 'president', 'ceo', 'founder'] },
-  { locations: ['Toledo, Ohio, United States', 'Cleveland, Ohio, United States'], titles: ['owner', 'president', 'ceo'] },
-  { locations: ['Windsor, Ontario, Canada', 'Detroit, Michigan, United States'], titles: ['purchasing manager', 'operations manager', 'marketing manager', 'marketing director'] },
+  { locations: ['Lansing, Michigan, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
+  { locations: ['London, Ontario, Canada', 'Chatham, Ontario, Canada'], titles: ['owner', 'president', 'ceo', 'founder'] },
+  { locations: ['Toledo, Ohio, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
 ];
 
 async function getPageTracker() {
@@ -101,7 +102,7 @@ async function syncContacts() {
 
     const apolloData = await apolloRequest({
       person_titles: config.titles,
-      organization_locations: config.locations,
+      person_locations: config.locations,
       organization_num_employees_ranges: ['1,10', '11,50', '51,200'],
       contact_email_status: ['verified', 'likely to engage'],
       page: state.page,
