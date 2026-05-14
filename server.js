@@ -92,7 +92,7 @@ async function metaGet(url) {
   });
 }
 
-// ─── SUPABASE CONTACT ROUTES ─────────────────────────────────────────────────
+// ─── SUPABASE CONTACT ROUTES ──────────────────────────────────────────────────
 
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
@@ -133,7 +133,7 @@ app.post('/api/graph', async (req, res) => {
     } catch(e) { return res.json({ error: e.message }); }
   }
 
-  // ─── MICROSOFT GRAPH ───────────────────────────────────────────────────────
+  // ─── MICROSOFT GRAPH ────────────────────────────────────────────────────────
   try {
     const tokenRes = await getToken(tenantId, clientId, clientSecret);
     if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
@@ -207,10 +207,7 @@ app.get('/auth/meta', (req, res) => {
   const scope = [
     'pages_show_list',
     'pages_read_engagement',
-    'pages_read_user_content',
-    'instagram_basic',
-    'instagram_manage_insights',
-    'read_insights'
+    'business_management'
   ].join(',');
   const url = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(META_REDIRECT)}&scope=${scope}&state=${clientId}`;
   res.redirect(url);
