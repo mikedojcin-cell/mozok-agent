@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mozok — Client Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --moz: #1D9E75;
+  --moz-light: #E1F5EE;
+  --moz-dark: #085041;
+  --bg: #f9f9f8;
+  --surface: #ffffff;
+  --border: rgba(0,0,0,0.1);
+  --border-strong: rgba(0,0,0,0.2);
+  --text: #1a1a18;
+  --text-2: #5f5e5a;
+  --text-3: #888780;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* LAYOUT */
+.app { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 3rem; }
+
+/* HEADER */
+.header { display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 0 1.25rem; border-bottom: 0.5px solid var(--border); margin-bottom: 1.5rem; }
+.logo { font-size: 20px; font-weight: 600; color: var(--moz); letter-spacing: -0.5px; }
+.logo span { color: var(--text-3); font-weight: 400; font-size: 13px; margin-left: 8px; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.conn-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+.conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; }
+.conn-dot.live { background: var(--moz); }
+
+/* TABS */
+.tabs { display: flex; gap: 4px; border-bottom: 0.5px solid var(--border); margin-bottom: 1.5rem; }
+.tab { background: none; border: none; cursor: pointer; padding: 9px 18px; font-size: 13px; font-family: inherit; color: var(--text-3); border-bottom: 2px solid transparent; margin-bottom: -0.5px; transition: color 0.15s; }
+.tab.active { color: var(--moz); border-bottom-color: var(--moz); font-weight: 500; }
+.tab:hover:not(.active) { color: var(--text-2); }
+
+/* VIEWS */
+.view { display: none; }
+.view.active { display: block; }
+
+/* STATS */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+.stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.125rem; }
+.stat-label { font-size: 12px; color: var(--text-3); margin-bottom: 6px; }
+.stat-val { font-size: 24px; font-weight: 600; color: var(--text); }
+.stat-sub { font-size: 11px; color: var(--text-3); margin-top: 3px; }
+
+/* CLIENT GRID */
+.client-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.client-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.125rem; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+.client-card:hover { border-color: var(--border-strong); }
+.client-card.selected { border: 2px solid var(--moz); }
+.card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+.av-0 { background: #E1F5EE; color: #085041; }
+.av-1 { background: #E6F1FB; color: #0C447C; }
+.av-2 { background: #FAEEDA; color: #633806; }
+.av-3 { background: #FAECE7; color: #712B13; }
+.av-4 { background: #EEEDFE; color: #3C3489; }
+.client-name { font-size: 14px; font-weight: 500; color: var(--text); line-height: 1.3; }
+.plan-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 500; margin-top: 3px; }
+.plan-starter { background: #F1EFE8; color: #444441; }
+.plan-pro { background: #E6F1FB; color: #0C447C; }
+.plan-growth { background: #E1F5EE; color: #085041; }
+.prog-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-3); margin-bottom: 5px; }
+.prog-bar { height: 5px; background: #eee; border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.prog-fill { height: 100%; border-radius: 3px; }
+.card-stats { display: flex; gap: 14px; margin-top: 10px; }
+.card-stat { font-size: 12px; color: var(--text-3); }
+.card-stat strong { color: var(--text); font-weight: 500; }
+
+/* DETAIL PANEL */
+.detail-panel { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.5rem; margin-top: 1.25rem; }
+.detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.sec-label { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+.check-item { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+.check-item:last-child { border-bottom: none; }
+.check-box { width: 17px; height: 17px; border: 1.5px solid var(--border-strong); border-radius: 4px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; cursor: pointer; transition: all 0.1s; }
+.check-box.done { background: var(--moz); border-color: var(--moz); }
+.check-box.done::after { content: ''; width: 8px; height: 5px; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: rotate(-45deg) translateY(-1px); display: block; }
+.check-text { flex: 1; color: var(--text); line-height: 1.4; }
+.check-text.done { color: var(--text-3); text-decoration: line-through; }
+.check-tag { font-size: 10px; padding: 1px 7px; border-radius: 10px; background: var(--bg); color: var(--text-3); border: 0.5px solid var(--border); white-space: nowrap; }
+
+/* TABLES */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th { font-size: 11px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.04em; padding: 0 10px 10px 0; text-align: left; border-bottom: 0.5px solid var(--border); }
+.tbl td { padding: 9px 10px 9px 0; border-bottom: 0.5px solid var(--border); color: var(--text); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: none; }
+
+/* BADGES */
+.badge { display: inline-flex; align-items: center; font-size: 11px; padding: 2px 9px; border-radius: 20px; font-weight: 500; }
+.b-ig { background: #FAEEDA; color: #633806; }
+.b-fb { background: #E6F1FB; color: #0C447C; }
+.b-tk { background: #FCEBEB; color: #791F1F; }
+.b-li { background: #E1F5EE; color: #085041; }
+.b-yt { background: #EEEDFE; color: #3C3489; }
+.b-go { background: #F1EFE8; color: #444441; }
+.b-ref { background: #FAEEDA; color: #633806; }
+.b-new { background: #E6F1FB; color: #0C447C; }
+.b-qual { background: #FAEEDA; color: #BA7517; }
+.b-book { background: #E1F5EE; color: #0F6E56; }
+
+/* LEAD DOT */
+.ldot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+.ldot-yes { background: var(--moz); }
+.ldot-no { background: #ddd; }
+
+/* BUTTONS */
+.btn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-family: inherit; padding: 7px 16px; border-radius: var(--radius); cursor: pointer; transition: all 0.15s; border: none; }
+.btn-primary { background: var(--moz); color: #fff; }
+.btn-primary:hover { background: var(--moz-dark); }
+.btn-ghost { background: none; border: 0.5px solid var(--border-strong); color: var(--text-2); }
+.btn-ghost:hover { background: var(--bg); }
+
+/* FORM */
+.form-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.form-row input, .form-row select,
+.field input, .field select { font-size: 13px; font-family: inherit; padding: 7px 11px; border-radius: var(--radius); border: 0.5px solid var(--border-strong); background: var(--surface); color: var(--text); outline: none; }
+.form-row input:focus, .form-row select:focus,
+.field input:focus, .field select:focus { border-color: var(--moz); }
+.form-row input { flex: 1; min-width: 100px; }
+.field { margin-bottom: 10px; }
+.field label { font-size: 12px; color: var(--text-3); display: block; margin-bottom: 4px; }
+.field input, .field select { width: 100%; }
+
+/* FUNNEL */
+.funnel-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 0.5px solid var(--border); }
+.funnel-row:last-child { border-bottom: none; }
+.funnel-label { font-size: 13px; color: var(--text-3); width: 95px; flex-shrink: 0; }
+.funnel-bar { flex: 1; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; }
+.funnel-fill { height: 100%; border-radius: 4px; background: var(--moz); }
+.funnel-num { font-size: 13px; font-weight: 500; color: var(--text); min-width: 45px; text-align: right; }
+
+/* MODAL */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.modal { background: var(--surface); border-radius: var(--radius-lg); padding: 1.75rem; width: 400px; max-width: 94vw; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+.modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; color: var(--text); }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1.5rem; }
+
+/* MISC */
+.section-title { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 12px; }
+.empty { text-align: center; padding: 2.5rem 1rem; color: var(--text-3); font-size: 14px; }
+.loading { text-align: center; padding: 2rem; color: var(--text-3); font-size: 13px; }
+.ai-box { display: flex; gap: 10px; background: var(--moz-light); border-radius: var(--radius); padding: 1rem 1.125rem; font-size: 13px; color: var(--moz-dark); line-height: 1.65; margin-top: 1.25rem; }
+.card-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 1.25rem; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">mozok <span>client ops dashboard</span></div>
+    <div class="header-right">
+      <div class="conn-status">
+        <span class="conn-dot" id="conn-dot"></span>
+        <span id="conn-text">connecting...</span>
+      </div>
+      <button class="btn btn-primary" onclick="openNewClientModal()">
+        <i class="ti ti-plus"></i> New client
+      </button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('overview',this)">Overview</button>
+    <button class="tab" onclick="switchTab('clients',this)">Clients</button>
+    <button class="tab" onclick="switchTab('social',this)">Social tracker</button>
+    <button class="tab" onclick="switchTab('leads',this)">Lead funnel</button>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div id="view-overview" class="view active">
+    <div class="stats-row">
+      <div class="stat"><div class="stat-label">Active clients</div><div class="stat-val" id="ov-clients">—</div><div class="stat-sub">across 3 plans</div></div>
+      <div class="stat"><div class="stat-label">Total impressions</div><div class="stat-val" id="ov-impr">—</div><div class="stat-sub">from all posts</div></div>
+      <div class="stat"><div class="stat-label">Leads generated</div><div class="stat-val" id="ov-leads">—</div><div class="stat-sub">from social</div></div>
+      <div class="stat"><div class="stat-label">Avg checklist</div><div class="stat-val" id="ov-check">—</div><div class="stat-sub">completion</div></div>
+    </div>
+    <div class="section-title">All clients</div>
+    <div class="client-grid" id="ov-grid"><div class="loading">Loading...</div></div>
+    <div class="ai-box" id="ov-ai" style="display:none;">
+      <i class="ti ti-sparkles" style="font-size:16px;margin-top:1px;flex-shrink:0;"></i>
+      <div id="ov-ai-text"></div>
+    </div>
+  </div>
+
+  <!-- CLIENTS -->
+  <div id="view-clients" class="view">
+    <div class="client-grid" id="cl-grid"><div class="loading">Loading...</div></div>
+    <div id="cl-detail"></div>
+  </div>
+
+  <!-- SOCIAL -->
+  <div id="view-social" class="view">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="section-title" style="margin:0;">Post performance log</div>
+      <select id="social-filter" class="btn btn-ghost" style="padding:6px 12px;" onchange="renderSocial()">
+        <option value="all">All clients</option>
+      </select>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="tbl" style="table-layout:fixed;min-width:700px;">
+        <thead><tr>
+          <th style="width:28%">Content</th>
+          <th style="width:13%">Client</th>
+          <th style="width:11%">Platform</th>
+          <th style="width:9%">Date</th>
+          <th style="width:11%">Impressions</th>
+          <th style="width:8%">Eng%</th>
+          <th style="width:8%">Leads</th>
+          <th style="width:12%">Rating</th>
+        </tr></thead>
+        <tbody id="posts-tbody"><tr><td colspan="8" class="loading">Loading...</td></tr></tbody>
+      </table>
+    </div>
+    <div class="section-title" style="margin-top:1.5rem;">Log a new post</div>
+    <div class="form-row">
+      <input id="np-content" placeholder="Post description" />
+      <select id="np-client"></select>
+      <select id="np-platform">
+        <option>Instagram</option><option>Facebook</option><option>TikTok</option>
+        <option>LinkedIn</option><option>YouTube</option><option>Google</option>
+      </select>
+      <input id="np-impr" placeholder="Impressions" type="number" style="width:120px;flex:none;" />
+      <input id="np-eng" placeholder="Eng%" type="number" step="0.1" style="width:80px;flex:none;" />
+      <input id="np-leads" placeholder="Leads" type="number" style="width:70px;flex:none;" />
+      <button class="btn btn-primary" onclick="addPost()">Add post</button>
+    </div>
+  </div>
+
+  <!-- LEADS -->
+  <div id="view-leads" class="view">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+      <div class="card-wrap">
+        <div class="sec-label">Lead funnel</div>
+        <div id="funnel-rows"><div class="loading">Loading...</div></div>
+      </div>
+      <div class="card-wrap">
+        <div class="sec-label">Add a lead</div>
+        <div class="field"><label>Contact name</label><input id="nl-contact" placeholder="e.g. Jamie Torres" /></div>
+        <div class="field"><label>Client</label><select id="nl-client"></select></div>
+        <div class="field"><label>Source</label>
+          <select id="nl-source">
+            <option>Instagram</option><option>Facebook</option><option>TikTok</option>
+            <option>LinkedIn</option><option>Google</option><option>Referral</option><option>Other</option>
+          </select>
+        </div>
+        <div class="field"><label>Est. value</label><input id="nl-value" placeholder="e.g. $1,200" /></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px;" onclick="addLead()">Add lead</button>
+      </div>
+    </div>
+    <div class="section-title">Recent inquiries</div>
+    <table class="tbl" style="table-layout:fixed;">
+      <thead><tr>
+        <th style="width:22%">Contact</th>
+        <th style="width:20%">Client</th>
+        <th style="width:14%">Source</th>
+        <th style="width:12%">Date</th>
+        <th style="width:14%">Status</th>
+        <th style="width:18%">Value</th>
+      </tr></thead>
+      <tbody id="leads-tbody"><tr><td colspan="6" class="loading">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- NEW CLIENT MODAL -->
+<div id="modal-client" class="modal-backdrop" style="display:none;" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3>Add new client</h3>
+    <div class="field"><label>Business name</label><input id="m-name" placeholder="e.g. Windsor Roofing Co." /></div>
+    <div class="field"><label>Plan</label>
+      <select id="m-plan">
+        <option value="starter">Starter — 8 posts/mo ($497)</option>
+        <option value="pro">Pro — 16 posts/mo ($797)</option>
+        <option value="growth">Growth — 28 posts/mo ($1,197)</option>
+      </select>
+    </div>
+    <div class="field"><label>Start month</label><input id="m-month" placeholder="e.g. May 2026" /></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveNewClient()">Add client</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
+const SUPA_KEY = 'sb_publishable_SlDXLrgKZizXZsBGxK3M4Q_FzVzgkpK';
+
+const PLAN_POSTS = { starter: 8, pro: 16, growth: 28 };
+
+const CHECKLISTS = {
+  starter: [
+    { text: 'Onboarding call completed', tag: 'setup' },
+    { text: 'Brand assets collected', tag: 'setup' },
+    { text: 'Social accounts access granted', tag: 'setup' },
+    { text: 'Content calendar Month 1 approved', tag: 'content' },
+    { text: 'First 4 posts published', tag: 'content' },
+    { text: 'Monthly report sent', tag: 'reporting' },
+    { text: 'Client check-in call', tag: 'account' },
+    { text: 'Review & plan Month 2', tag: 'content' }
+  ],
+  pro: [
+    { text: 'Onboarding call completed', tag: 'setup' },
+    { text: 'Brand assets collected', tag: 'setup' },
+    { text: 'Social accounts access granted', tag: 'setup' },
+    { text: 'Competitor audit done', tag: 'strategy' },
+    { text: 'Content strategy approved', tag: 'strategy' },
+    { text: '2-week content calendar approved', tag: 'content' },
+    { text: 'First 8 posts published', tag: 'content' },
+    { text: 'Stories/reels workflow active', tag: 'content' },
+    { text: 'Google Business posts live', tag: 'content' },
+    { text: 'Mid-month performance review', tag: 'reporting' },
+    { text: 'Monthly report sent', tag: 'reporting' },
+    { text: 'Lead source tracking set up', tag: 'leads' }
+  ],
+  growth: [
+    { text: 'Onboarding call completed', tag: 'setup' },
+    { text: 'Brand assets collected', tag: 'setup' },
+    { text: 'Social accounts access granted', tag: 'setup' },
+    { text: 'Full brand audit & positioning', tag: 'strategy' },
+    { text: 'Competitor analysis delivered', tag: 'strategy' },
+    { text: 'Monthly content strategy approved', tag: 'strategy' },
+    { text: 'Ad account connected', tag: 'ads' },
+    { text: 'First ad campaign live', tag: 'ads' },
+    { text: 'First 12 posts published', tag: 'content' },
+    { text: 'Reels/video content active', tag: 'content' },
+    { text: 'Google Business optimized', tag: 'content' },
+    { text: 'Referral program set up', tag: 'leads' },
+    { text: 'Lead tracking dashboard live', tag: 'leads' },
+    { text: 'Mid-month performance review', tag: 'reporting' },
+    { text: 'Monthly report sent', tag: 'reporting' }
+  ]
+};
+
+let clients = [], posts = [], leads = [], checklists = [];
+let selectedClientId = null;
+let currentTab = 'overview';
+
+async function supa(method, table, body, params) {
+  const url = new URL(`${SUPA_URL}/rest/v1/${table}`);
+  if (params) Object.entries(params).forEach(([k,v]) => url.searchParams.set(k,v));
+  const res = await fetch(url, {
+    method,
+    headers: {
+      'apikey': SUPA_KEY,
+      'Authorization': `Bearer ${SUPA_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': method === 'POST' ? 'return=representation' : ''
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error(await res.text());
+  const text = await res.text();
+  return text ? JSON.parse(text) : [];
+}
+
+async function loadAll() {
+  try {
+    [clients, posts, leads, checklists] = await Promise.all([
+      supa('GET','clients',null,{ order:'created_at.asc' }),
+      supa('GET','posts',null,{ order:'created_at.desc' }),
+      supa('GET','leads',null,{ order:'created_at.desc' }),
+      supa('GET','checklists',null,{ order:'sort_order.asc' })
+    ]);
+    document.getElementById('conn-dot').classList.add('live');
+    document.getElementById('conn-text').textContent = 'live — ' + clients.length + ' clients';
+    refreshAll();
+  } catch(e) {
+    document.getElementById('conn-text').textContent = 'connection error';
+    console.error(e);
+  }
+}
+
+function getInitials(name) {
+  return name.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();
+}
+function checklistPct(clientId) {
+  const cl = checklists.filter(c => c.client_id === clientId);
+  if (!cl.length) return 0;
+  return Math.round(cl.filter(c=>c.done).length / cl.length * 100);
+}
+function clientLeads(id) { return leads.filter(l => l.client_id === id).length; }
+function clientImpressions(id) { return posts.filter(p => p.client_id === id).reduce((a,p)=>a+p.impressions,0); }
+function platformBadge(p) {
+  const m = { Instagram:'b-ig', Facebook:'b-fb', TikTok:'b-tk', LinkedIn:'b-li', YouTube:'b-yt', Google:'b-go', Referral:'b-ref' };
+  return `<span class="badge ${m[p]||'b-go'}">${p}</span>`;
+}
+function statusBadge(s) {
+  const m = { new:'b-new', qualified:'b-qual', booked:'b-book' };
+  return `<span class="badge ${m[s]||'b-new'}">${s}</span>`;
+}
+
+function clientCardHTML(c, clickable) {
+  const idx = clients.indexOf(c) % 5;
+  const prog = checklistPct(c.id);
+  const postsDone = posts.filter(p => p.client_id === c.id).length;
+  const postGoal = PLAN_POSTS[c.plan] || 8;
+  const postPct = Math.min(100, Math.round(postsDone/postGoal*100));
+  const lc = clientLeads(c.id);
+  return `<div class="client-card${selectedClientId===c.id?' selected':''}" ${clickable?`onclick="selectClient('${c.id}')"`:''}>
+    <div class="card-top">
+      <div class="avatar av-${idx}">${getInitials(c.name)}</div>
+      <div>
+        <div class="client-name">${c.name}</div>
+        <span class="plan-badge plan-${c.plan}">${c.plan.charAt(0).toUpperCase()+c.plan.slice(1)}</span>
+      </div>
+    </div>
+    <div class="prog-label"><span>Checklist</span><span>${prog}%</span></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${prog}%;background:var(--moz);"></div></div>
+    <div class="prog-label"><span>Posts</span><span>${postsDone}/${postGoal}</span></div>
+    <div class="prog-bar"><div class="prog-fill" style="width:${postPct}%;background:#378ADD;"></div></div>
+    <div class="card-stats">
+      <div class="card-stat"><strong>${lc}</strong> leads</div>
+      <div class="card-stat">Since <strong>${c.start_month||'—'}</strong></div>
+    </div>
+  </div>`;
+}
+
+function refreshAll() {
+  renderOverview();
+  populateSelects();
+  if (currentTab === 'clients') renderClients();
+  if (currentTab === 'social') renderSocial();
+  if (currentTab === 'leads') renderLeads();
+}
+
+function renderOverview() {
+  const totalImpr = posts.reduce((a,p)=>a+p.impressions,0);
+  const avgCheck = clients.length ? Math.round(clients.reduce((a,c)=>a+checklistPct(c.id),0)/clients.length) : 0;
+  document.getElementById('ov-clients').textContent = clients.length;
+  document.getElementById('ov-impr').textContent = totalImpr >= 1000 ? (totalImpr/1000).toFixed(1)+'K' : totalImpr || '0';
+  document.getElementById('ov-leads').textContent = leads.length;
+  document.getElementById('ov-check').textContent = avgCheck + '%';
+  document.getElementById('ov-grid').innerHTML = clients.length
+    ? clients.map(c => clientCardHTML(c, false)).join('')
+    : '<div class="empty">No clients yet — click + New client to get started</div>';
+  if (clients.length) {
+    const top = [...clients].sort((a,b) => clientLeads(b.id) - clientLeads(a.id))[0];
+    const aiBox = document.getElementById('ov-ai');
+    aiBox.style.display = 'flex';
+    document.getElementById('ov-ai-text').textContent = clients.length === 1
+      ? `${top.name} is your first client on the ${top.plan} plan. Get their checklist to 100% and log their first posts to start tracking performance.`
+      : `${top.name} is leading with ${clientLeads(top.id)} leads. Average checklist completion across all clients is ${avgCheck}% — aim for 100% on every new client within the first week.`;
+  }
+}
+
+function renderClients() {
+  document.getElementById('cl-grid').innerHTML = clients.length
+    ? clients.map(c => clientCardHTML(c, true)).join('')
+    : '<div class="empty">No clients yet.</div>';
+  if (selectedClientId) renderDetailPanel();
+  else document.getElementById('cl-detail').innerHTML = '';
+}
+
+function selectClient(id) {
+  selectedClientId = selectedClientId === id ? null : id;
+  renderClients();
+}
+
+async function toggleCheck(id, done) {
+  await supa('PATCH', `checklists?id=eq.${id}`, { done: !done });
+  checklists = await supa('GET','checklists',null,{ order:'sort_order.asc' });
+  renderClients();
+  renderOverview();
+}
+
+function renderDetailPanel() {
+  const c = clients.find(x => x.id === selectedClientId);
+  if (!c) { document.getElementById('cl-detail').innerHTML = ''; return; }
+  const idx = clients.indexOf(c) % 5;
+  const cl = checklists.filter(x => x.client_id === c.id);
+  const clientPosts = posts.filter(p => p.client_id === c.id).slice(0,5);
+
+  document.getElementById('cl-detail').innerHTML = `
+    <div class="detail-panel">
+      <div class="detail-header">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="avatar av-${idx}">${getInitials(c.name)}</div>
+          <div>
+            <div style="font-size:15px;font-weight:600;">${c.name}</div>
+            <div style="font-size:12px;color:var(--text-3);">${c.plan.charAt(0).toUpperCase()+c.plan.slice(1)} plan &middot; ${clientImpressions(c.id).toLocaleString()} impressions &middot; ${clientLeads(c.id)} leads</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost" style="padding:5px 10px;" onclick="selectedClientId=null;renderClients()"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="sec-label">Checklist</div>
+          ${cl.length ? cl.map(item => `
+            <div class="check-item">
+              <div class="check-box${item.done?' done':''}" onclick="toggleCheck('${item.id}',${item.done})"></div>
+              <span class="check-text${item.done?' done':''}">${item.item_text}</span>
+              <span class="check-tag">${item.tag}</span>
+            </div>`).join('') : '<div style="font-size:13px;color:var(--text-3);padding:0.5rem 0;">No checklist items.</div>'}
+        </div>
+        <div>
+          <div class="sec-label">Recent posts</div>
+          <table class="tbl" style="table-layout:fixed;">
+            <thead><tr><th style="width:40%">Post</th><th>Platform</th><th>Impr.</th><th>Eng%</th><th>Leads</th></tr></thead>
+            <tbody>
+              ${clientPosts.length ? clientPosts.map(p => `<tr>
+                <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.content}</td>
+                <td>${platformBadge(p.platform)}</td>
+                <td style="font-weight:500;">${p.impressions.toLocaleString()}</td>
+                <td style="font-weight:500;">${p.engagement}%</td>
+                <td><span class="ldot ${p.leads>0?'ldot-yes':'ldot-no'}"></span>${p.leads}</td>
+              </tr>`).join('') : '<tr><td colspan="5" style="font-size:13px;color:var(--text-3);padding:0.75rem 0;">No posts yet.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSocial() {
+  const filter = document.getElementById('social-filter').value;
+  const filtered = filter === 'all' ? posts : posts.filter(p => p.client_id === filter);
+  document.getElementById('posts-tbody').innerHTML = filtered.length ? filtered.map(p => {
+    const c = clients.find(x => x.id === p.client_id);
+    const rating = p.impressions > 3000 && p.engagement > 5 ? '⭐ Top' : p.impressions > 1500 ? 'Good' : 'Average';
+    const ratingColor = p.impressions > 3000 && p.engagement > 5 ? '#0F6E56' : p.impressions > 1500 ? '#185FA5' : '#888';
+    return `<tr>
+      <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${p.content}</td>
+      <td style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c ? c.name.split(' ')[0] : '—'}</td>
+      <td>${platformBadge(p.platform)}</td>
+      <td style="font-size:12px;color:var(--text-3);">${p.post_date||'—'}</td>
+      <td style="font-weight:500;">${p.impressions.toLocaleString()}</td>
+      <td style="font-weight:500;">${p.engagement}%</td>
+      <td><span class="ldot ${p.leads>0?'ldot-yes':'ldot-no'}"></span>${p.leads}</td>
+      <td style="font-size:12px;font-weight:500;color:${ratingColor}">${rating}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="8" class="empty">No posts logged yet.</td></tr>';
+}
+
+function renderLeads() {
+  const totalImpr = posts.reduce((a,p)=>a+p.impressions,0);
+  const totalPostLeads = posts.reduce((a,p)=>a+p.leads,0);
+  const qualified = leads.filter(l=>l.status==='qualified'||l.status==='booked').length;
+  const booked = leads.filter(l=>l.status==='booked').length;
+  const stages = [
+    { label: 'Impressions', val: totalImpr >= 1000 ? (totalImpr/1000).toFixed(1)+'K' : String(totalImpr||0), pct: 100 },
+    { label: 'Post leads', val: String(totalPostLeads), pct: totalImpr ? Math.max(2, Math.min(80, Math.round(totalPostLeads/totalImpr*100*30))) : 2 },
+    { label: 'Inquiries', val: String(leads.length), pct: leads.length ? Math.max(2, Math.min(60, Math.round(leads.length/Math.max(totalPostLeads,1)*80))) : 2 },
+    { label: 'Qualified', val: String(qualified), pct: leads.length ? Math.max(2, Math.round(qualified/Math.max(leads.length,1)*100)) : 2 },
+    { label: 'Booked', val: String(booked), pct: leads.length ? Math.max(2, Math.round(booked/Math.max(leads.length,1)*80)) : 2 }
+  ];
+  document.getElementById('funnel-rows').innerHTML = stages.map(s => `
+    <div class="funnel-row">
+      <div class="funnel-label">${s.label}</div>
+      <div class="funnel-bar"><div class="funnel-fill" style="width:${s.pct}%;"></div></div>
+      <div class="funnel-num">${s.val}</div>
+    </div>`).join('');
+
+  document.getElementById('leads-tbody').innerHTML = leads.length ? leads.map(l => {
+    const c = clients.find(x => x.id === l.client_id);
+    return `<tr>
+      <td>${l.contact_name}</td>
+      <td style="font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c ? c.name : '—'}</td>
+      <td>${platformBadge(l.source)}</td>
+      <td style="font-size:12px;color:var(--text-3);">${l.lead_date||'—'}</td>
+      <td>${statusBadge(l.status)}</td>
+      <td style="font-weight:500;">${l.value||'—'}</td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="empty">No leads yet.</td></tr>';
+}
+
+function populateSelects() {
+  ['social-filter','np-client','nl-client'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = id === 'social-filter' ? '<option value="all">All clients</option>' : '';
+    clients.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name; el.appendChild(o);
+    });
+    if (cur) el.value = cur;
+  });
+}
+
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('view-'+tab).classList.add('active');
+  currentTab = tab;
+  if (tab === 'clients') renderClients();
+  if (tab === 'social') renderSocial();
+  if (tab === 'leads') renderLeads();
+}
+
+function openNewClientModal() { document.getElementById('modal-client').style.display = 'flex'; }
+function closeModal() { document.getElementById('modal-client').style.display = 'none'; }
+
+async function saveNewClient() {
+  const name = document.getElementById('m-name').value.trim();
+  const plan = document.getElementById('m-plan').value;
+  const month = document.getElementById('m-month').value.trim();
+  if (!name) return;
+  const [newClient] = await supa('POST','clients',{ name, initials: getInitials(name), plan, start_month: month, posts_done: 0, leads: 0 });
+  clients.push(newClient);
+  const items = CHECKLISTS[plan].map((item, i) => ({ client_id: newClient.id, item_text: item.text, tag: item.tag, done: false, sort_order: i }));
+  const newChecks = await supa('POST','checklists', items);
+  checklists.push(...newChecks);
+  closeModal();
+  document.getElementById('m-name').value = '';
+  document.getElementById('m-month').value = '';
+  refreshAll();
+}
+
+async function addPost() {
+  const content = document.getElementById('np-content').value.trim();
+  const client_id = document.getElementById('np-client').value;
+  const platform = document.getElementById('np-platform').value;
+  const impressions = parseInt(document.getElementById('np-impr').value) || 0;
+  const engagement = parseFloat(document.getElementById('np-eng').value) || 0;
+  const post_leads = parseInt(document.getElementById('np-leads').value) || 0;
+  if (!content || !client_id) return;
+  const today = new Date().toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  const [newPost] = await supa('POST','posts',{ client_id, content, platform, post_date: today, impressions, engagement, leads: post_leads });
+  posts.unshift(newPost);
+  ['np-content','np-impr','np-eng','np-leads'].forEach(id => document.getElementById(id).value = '');
+  refreshAll();
+}
+
+async function addLead() {
+  const contact_name = document.getElementById('nl-contact').value.trim();
+  const client_id = document.getElementById('nl-client').value;
+  const source = document.getElementById('nl-source').value;
+  const value = document.getElementById('nl-value').value.trim() || '—';
+  if (!contact_name || !client_id) return;
+  const today = new Date().toLocaleDateString('en-CA',{month:'short',day:'numeric'});
+  const [newLead] = await supa('POST','leads',{ client_id, contact_name, source, lead_date: today, status: 'new', value });
+  leads.unshift(newLead);
+  document.getElementById('nl-contact').value = '';
+  document.getElementById('nl-value').value = '';
+  refreshAll();
+}
+
+loadAll();
+</script>
+</body>
+</html>
