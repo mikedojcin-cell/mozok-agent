@@ -9,7 +9,7 @@ function apolloRequest(body) {
     const data = JSON.stringify(body);
     const options = {
       hostname: 'api.apollo.io',
-      path: '/v1/mixed_people/search',
+      path: '/v1/mixed_people/api_search',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
