@@ -356,6 +356,51 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   }
 });
 
+// ─── CLAUDE POST GENERATOR ────────────────────────────────────────────────────
+
+app.post('/api/generate-post', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.json({ error: 'No prompt provided' });
+
+  const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
+  if (!ANTHROPIC_KEY) return res.json({ error: 'ANTHROPIC_KEY not set in environment' });
+
+  try {
+    const data = JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{ role: 'user', content: prompt }]
+    });
+
+    const result = await new Promise((resolve, reject) => {
+      const req = https.request({
+        hostname: 'api.anthropic.com',
+        path: '/v1/messages',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': ANTHROPIC_KEY,
+          'anthropic-version': '2023-06-01',
+          'Content-Length': Buffer.byteLength(data)
+        }
+      }, r => {
+        let d = '';
+        r.on('data', c => d += c);
+        r.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
+      });
+      req.on('error', reject);
+      req.write(data);
+      req.end();
+    });
+
+    const text = result.content?.[0]?.text || '';
+    if (!text) return res.json({ error: 'No content returned from Claude' });
+    res.json({ text });
+  } catch(e) {
+    res.json({ error: e.message });
+  }
+});
+
 // ─── CATCH ALL ────────────────────────────────────────────────────────────────
 
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
