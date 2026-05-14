@@ -41,9 +41,10 @@
   .warn { background: #2b1800; border: 1px solid #ca5010; color: #f7ba1e; padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
 
   /* PIPELINE */
-  .pipeline-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .pipeline-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; align-items: start; }
   .pipe-col { background: #1a1f2e; border: 1px solid #2a2f3d; border-radius: 10px; padding: 14px; }
   .pipe-col-header { font-size: 12px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; }
+  .pipe-col-body { max-height: 480px; overflow-y: auto; }
   .pipe-count { font-size: 20px; font-weight: 700; }
   .pipe-label { font-size: 11px; color: #666; margin-top: 2px; }
   .pipe-contact { background: #0f1420; border: 1px solid #2a2f3d; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font-size: 12px; cursor: pointer; transition: border-color 0.15s; }
@@ -143,19 +144,19 @@
       <div class="pipeline-grid" id="pipelineGrid">
         <div class="pipe-col">
           <div class="pipe-col-header" style="color:#4fa3e0;">🆕 Ready to Send<span id="pc-ready" class="pipe-count">-</span></div>
-          <div id="pl-ready"><div style="color:#555;font-size:12px">Loading...</div></div>
+          <div class="pipe-col-body" id="pl-ready"><div style="color:#555;font-size:12px">Loading...</div></div>
         </div>
         <div class="pipe-col">
           <div class="pipe-col-header" style="color:#6ccb5f;">📨 Email 1 Sent<span id="pc-e1" class="pipe-count">-</span></div>
-          <div id="pl-e1"><div style="color:#555;font-size:12px">Loading...</div></div>
+          <div class="pipe-col-body" id="pl-e1"><div style="color:#555;font-size:12px">Loading...</div></div>
         </div>
         <div class="pipe-col">
           <div class="pipe-col-header" style="color:#f7ba1e;">⏰ Follow-Up Due<span id="pc-due" class="pipe-count">-</span></div>
-          <div id="pl-due"><div style="color:#555;font-size:12px">Loading...</div></div>
+          <div class="pipe-col-body" id="pl-due"><div style="color:#555;font-size:12px">Loading...</div></div>
         </div>
         <div class="pipe-col">
           <div class="pipe-col-header" style="color:#6ccb5f;">👁 Opened Email<span id="pc-opened" class="pipe-count">-</span></div>
-          <div id="pl-opened"><div style="color:#555;font-size:12px">Loading...</div></div>
+          <div class="pipe-col-body" id="pl-opened"><div style="color:#555;font-size:12px">Loading...</div></div>
         </div>
       </div>
 
@@ -402,7 +403,7 @@ async function loadPipeline() {
 function renderPipeCol(elId, contacts, type) {
   const el = document.getElementById(elId);
   if (!contacts.length) { el.innerHTML = '<div style="color:#555;font-size:11px;padding:4px">None</div>'; return; }
-  el.innerHTML = contacts.slice(0,8).map(c => {
+  el.innerHTML = contacts.map(c => {
     const name = `${c.firstname||''} ${c.lastname||''}`.trim();
     const daysAgo = c.email1_sent_at ? Math.floor((Date.now()-new Date(c.email1_sent_at))/86400000) : null;
     const openMeta = c.open_count > 0 ? `<div class="pipe-opened">👁 Opened ${c.open_count}x — ${c.last_opened_at ? new Date(c.last_opened_at).toLocaleDateString() : ''}</div>` : '';
@@ -413,7 +414,6 @@ function renderPipeCol(elId, contacts, type) {
       ${timeMeta}${openMeta}
     </div>`;
   }).join('');
-  if (contacts.length > 8) el.innerHTML += `<div style="color:#555;font-size:11px;padding:4px">+${contacts.length-8} more</div>`;
 }
 
 function renderActions(due, opened) {
