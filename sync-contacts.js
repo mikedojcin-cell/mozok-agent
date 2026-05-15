@@ -7,7 +7,7 @@ const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 function apolloRequest(path, body) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
-    const options = {
+    const req = https.request({
       hostname: 'api.apollo.io',
       path,
       method: 'POST',
@@ -16,8 +16,7 @@ function apolloRequest(path, body) {
         'Cache-Control': 'no-cache',
         'X-Api-Key': APOLLO_KEY,
       }
-    };
-    const req = https.request(options, (res) => {
+    }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
@@ -31,7 +30,6 @@ function apolloRequest(path, body) {
   });
 }
 
-// Enrich a batch of up to 10 people to get emails
 async function enrichBatch(people) {
   const details = people.map(p => ({
     id: p.id,
@@ -56,7 +54,7 @@ function supabaseRequest(method, path, body) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
     const url = new URL(`${SUPABASE_URL}${path}`);
-    const options = {
+    const req = https.request({
       hostname: url.hostname,
       path: url.pathname + url.search,
       method,
@@ -66,8 +64,7 @@ function supabaseRequest(method, path, body) {
         'Authorization': `Bearer ${SUPABASE_KEY}`,
         'Prefer': method === 'POST' ? 'resolution=merge-duplicates' : 'return=representation'
       }
-    };
-    const req = https.request(options, (res) => {
+    }, (res) => {
       let body = '';
       res.on('data', chunk => body += chunk);
       res.on('end', () => {
@@ -81,45 +78,116 @@ function supabaseRequest(method, path, body) {
   });
 }
 
-// Location + page configs — cycles through these day by day
-// Uses person_locations (where the person is) not organization_locations
+const OWNER_TITLES = ['owner', 'president', 'ceo', 'founder', 'managing director', 'principal'];
+const MANAGER_TITLES = ['marketing manager', 'marketing director', 'general manager', 'operations manager', 'business development manager'];
+
 const SEARCH_CONFIGS = [
-  { locations: ['Windsor, Ontario, Canada'], titles: ['owner', 'president', 'ceo', 'founder', 'managing director'] },
-  { locations: ['Windsor, Ontario, Canada'], titles: ['purchasing manager', 'operations manager', 'marketing manager', 'general manager'] },
-  { locations: ['Detroit, Michigan, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
-  { locations: ['Detroit, Michigan, United States'], titles: ['marketing manager', 'marketing director', 'operations manager'] },
-  { locations: ['Ann Arbor, Michigan, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
-  { locations: ['Troy, Michigan, United States', 'Sterling Heights, Michigan, United States'], titles: ['owner', 'president', 'ceo'] },
-  { locations: ['Dearborn, Michigan, United States', 'Livonia, Michigan, United States'], titles: ['owner', 'president', 'ceo'] },
-  { locations: ['Lansing, Michigan, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
-  { locations: ['London, Ontario, Canada', 'Chatham, Ontario, Canada'], titles: ['owner', 'president', 'ceo', 'founder'] },
-  { locations: ['Toledo, Ohio, United States'], titles: ['owner', 'president', 'ceo', 'founder'] },
+  // ── CANADA ──────────────────────────────────────────────────────────────────
+  { label: 'Ontario — Owners',          locations: ['Ontario, Canada'],               titles: OWNER_TITLES },
+  { label: 'Ontario — Managers',        locations: ['Ontario, Canada'],               titles: MANAGER_TITLES },
+  { label: 'Quebec — Owners',           locations: ['Quebec, Canada'],                titles: OWNER_TITLES },
+  { label: 'British Columbia — Owners', locations: ['British Columbia, Canada'],      titles: OWNER_TITLES },
+  { label: 'Alberta — Owners',          locations: ['Alberta, Canada'],               titles: OWNER_TITLES },
+  { label: 'Manitoba — Owners',         locations: ['Manitoba, Canada'],              titles: OWNER_TITLES },
+  { label: 'Saskatchewan — Owners',     locations: ['Saskatchewan, Canada'],          titles: OWNER_TITLES },
+  { label: 'Nova Scotia — Owners',      locations: ['Nova Scotia, Canada'],           titles: OWNER_TITLES },
+  // ── MICHIGAN ────────────────────────────────────────────────────────────────
+  { label: 'Michigan — Owners',         locations: ['Michigan, United States'],       titles: OWNER_TITLES },
+  { label: 'Michigan — Managers',       locations: ['Michigan, United States'],       titles: MANAGER_TITLES },
+  // ── OHIO ─────────────────────────────────────────────────────────────────────
+  { label: 'Ohio — Owners',             locations: ['Ohio, United States'],           titles: OWNER_TITLES },
+  { label: 'Ohio — Managers',           locations: ['Ohio, United States'],           titles: MANAGER_TITLES },
+  // ── PENNSYLVANIA ─────────────────────────────────────────────────────────────
+  { label: 'Pennsylvania — Owners',     locations: ['Pennsylvania, United States'],   titles: OWNER_TITLES },
+  { label: 'Pennsylvania — Managers',   locations: ['Pennsylvania, United States'],   titles: MANAGER_TITLES },
+  // ── INDIANA ──────────────────────────────────────────────────────────────────
+  { label: 'Indiana — Owners',          locations: ['Indiana, United States'],        titles: OWNER_TITLES },
+  { label: 'Indiana — Managers',        locations: ['Indiana, United States'],        titles: MANAGER_TITLES },
+  // ── ILLINOIS ─────────────────────────────────────────────────────────────────
+  { label: 'Illinois — Owners',         locations: ['Illinois, United States'],       titles: OWNER_TITLES },
+  { label: 'Illinois — Managers',       locations: ['Illinois, United States'],       titles: MANAGER_TITLES },
+  // ── WISCONSIN ────────────────────────────────────────────────────────────────
+  { label: 'Wisconsin — Owners',        locations: ['Wisconsin, United States'],      titles: OWNER_TITLES },
+  { label: 'Wisconsin — Managers',      locations: ['Wisconsin, United States'],      titles: MANAGER_TITLES },
+  // ── NEW YORK ─────────────────────────────────────────────────────────────────
+  { label: 'New York — Owners',         locations: ['New York, United States'],       titles: OWNER_TITLES },
+  { label: 'New York — Managers',       locations: ['New York, United States'],       titles: MANAGER_TITLES },
+  // ── FLORIDA ──────────────────────────────────────────────────────────────────
+  { label: 'Florida — Owners',          locations: ['Florida, United States'],        titles: OWNER_TITLES },
+  { label: 'Florida — Managers',        locations: ['Florida, United States'],        titles: MANAGER_TITLES },
+  // ── TEXAS ────────────────────────────────────────────────────────────────────
+  { label: 'Texas — Owners',            locations: ['Texas, United States'],          titles: OWNER_TITLES },
+  { label: 'Texas — Managers',          locations: ['Texas, United States'],          titles: MANAGER_TITLES },
+  // ── GEORGIA ──────────────────────────────────────────────────────────────────
+  { label: 'Georgia — Owners',          locations: ['Georgia, United States'],        titles: OWNER_TITLES },
+  // ── NORTH CAROLINA ───────────────────────────────────────────────────────────
+  { label: 'North Carolina — Owners',   locations: ['North Carolina, United States'], titles: OWNER_TITLES },
+  // ── VIRGINIA ─────────────────────────────────────────────────────────────────
+  { label: 'Virginia — Owners',         locations: ['Virginia, United States'],       titles: OWNER_TITLES },
+  // ── MINNESOTA ────────────────────────────────────────────────────────────────
+  { label: 'Minnesota — Owners',        locations: ['Minnesota, United States'],      titles: OWNER_TITLES },
+  // ── MISSOURI ─────────────────────────────────────────────────────────────────
+  { label: 'Missouri — Owners',         locations: ['Missouri, United States'],       titles: OWNER_TITLES },
+  // ── TENNESSEE ────────────────────────────────────────────────────────────────
+  { label: 'Tennessee — Owners',        locations: ['Tennessee, United States'],      titles: OWNER_TITLES },
+  // ── COLORADO ─────────────────────────────────────────────────────────────────
+  { label: 'Colorado — Owners',         locations: ['Colorado, United States'],       titles: OWNER_TITLES },
+  // ── WASHINGTON ───────────────────────────────────────────────────────────────
+  { label: 'Washington — Owners',       locations: ['Washington, United States'],     titles: OWNER_TITLES },
+  // ── CALIFORNIA ───────────────────────────────────────────────────────────────
+  { label: 'California — Owners',       locations: ['California, United States'],     titles: OWNER_TITLES },
+  { label: 'California — Managers',     locations: ['California, United States'],     titles: MANAGER_TITLES },
 ];
 
-async function getPageTracker() {
+async function getState() {
   const res = await supabaseRequest('GET', '/rest/v1/sync_state?key=eq.apollo_page&select=value');
   if (res.status === 200 && res.body && res.body.length > 0) {
     return JSON.parse(res.body[0].value);
   }
-  return { config_index: 0, page: 1 };
+  return { config_index: 0, page: 1, exhausted: [] };
 }
 
-async function savePageTracker(state) {
+async function saveState(state) {
   await supabaseRequest('POST', '/rest/v1/sync_state?on_conflict=key', [
     { key: 'apollo_page', value: JSON.stringify(state) }
   ]);
+}
+
+function findNextConfig(state) {
+  const exhausted = state.exhausted || [];
+  const total = SEARCH_CONFIGS.length;
+  let idx = state.config_index % total;
+  // Find next non-exhausted config
+  for (let i = 0; i < total; i++) {
+    const candidate = (idx + i) % total;
+    if (!exhausted.includes(candidate)) return candidate;
+  }
+  // All exhausted — reset and start over
+  console.log('🔄 All configs exhausted — resetting and starting over!');
+  return 0;
 }
 
 async function syncContacts() {
   console.log('Starting Apollo → Supabase sync...');
 
   try {
-    // Get current position
-    let state = await getPageTracker();
-    console.log(`Resuming from config_index=${state.config_index}, page=${state.page}`);
+    let state = await getState();
+    if (!state.exhausted) state.exhausted = [];
 
-    const config = SEARCH_CONFIGS[state.config_index % SEARCH_CONFIGS.length];
-    console.log(`Searching: ${config.locations.join(', ')} | Titles: ${config.titles.join(', ')} | Page: ${state.page}`);
+    const total = SEARCH_CONFIGS.length;
+    const activeCount = total - state.exhausted.length;
+    console.log(`Active configs: ${activeCount}/${total} | Exhausted: ${state.exhausted.length}`);
+
+    // If all exhausted — reset
+    if (state.exhausted.length >= total) {
+      console.log('All configs exhausted — resetting all.');
+      state.exhausted = [];
+      state.config_index = 0;
+      state.page = 1;
+    }
+
+    const config = SEARCH_CONFIGS[state.config_index % total];
+    console.log(`Config ${state.config_index + 1}/${total}: ${config.label} | Page: ${state.page}`);
 
     const apolloData = await apolloRequest('/v1/mixed_people/api_search', {
       api_key: APOLLO_KEY,
@@ -132,17 +200,22 @@ async function syncContacts() {
     });
 
     if (!apolloData.people || apolloData.people.length === 0) {
-      console.log(`Apollo response: ${JSON.stringify(apolloData).substring(0, 300)}`);
-      console.log(`No contacts on page ${state.page} for this config. Moving to next location.`);
-      state = { config_index: (state.config_index + 1) % SEARCH_CONFIGS.length, page: 1 };
-      await savePageTracker(state);
-      console.log(`Next run will use config_index=${state.config_index}`);
+      // Mark this config as exhausted
+      console.log(`⚠ No contacts found — marking "${config.label}" as exhausted.`);
+      if (!state.exhausted.includes(state.config_index % total)) {
+        state.exhausted.push(state.config_index % total);
+      }
+      const nextIdx = findNextConfig({ ...state, config_index: (state.config_index + 1) % total });
+      state.config_index = nextIdx;
+      state.page = 1;
+      await saveState(state);
+      const next = SEARCH_CONFIGS[nextIdx];
+      console.log(`Next run: ${next.label}`);
       return;
     }
 
-    console.log(`Fetched ${apolloData.people.length} contacts from Apollo. Enriching for emails...`);
+    console.log(`Fetched ${apolloData.people.length} contacts. Enriching emails...`);
 
-    // Enrich in batches of 10 to get emails
     const enriched = [];
     for (let i = 0; i < apolloData.people.length; i += 10) {
       const batch = apolloData.people.slice(i, i + 10);
@@ -151,13 +224,11 @@ async function syncContacts() {
       console.log(`Enriched batch ${Math.floor(i/10)+1}: ${matches.length} matches`);
     }
 
-    // Build email map from enriched results
     const emailMap = {};
     for (const m of enriched) {
       if (m.id && m.email) emailMap[m.id] = m.email;
     }
 
-    // Only keep contacts that have emails
     const contacts = apolloData.people
       .filter(p => emailMap[p.id])
       .map(p => ({
@@ -175,21 +246,34 @@ async function syncContacts() {
         last_synced: new Date().toISOString()
       }));
 
-    console.log(`${contacts.length} contacts have verified emails.`);
+    console.log(`${contacts.length} contacts with verified emails.`);
 
     const result = await supabaseRequest('POST', '/rest/v1/contacts?on_conflict=apollo_id', contacts);
     console.log(`Supabase status: ${result.status}`);
-    console.log(`Supabase body: ${JSON.stringify(result.body).substring(0, 500)}`);
+
     if (result.status === 200 || result.status === 201) {
       console.log(`✅ Synced ${contacts.length} contacts to Supabase.`);
     } else {
-      console.log(`❌ Supabase insert failed - see body above for reason.`);
+      console.log(`❌ Supabase error: ${JSON.stringify(result.body).substring(0, 300)}`);
     }
 
-    // Advance page for next run
-    state.page += 1;
-    await savePageTracker(state);
-    console.log(`Next run will fetch page ${state.page} of the same config.`);
+    // Move to next page or next config if low results
+    if (apolloData.people.length < 50) {
+      console.log(`Low results (${apolloData.people.length}) — moving to next config.`);
+      if (!state.exhausted.includes(state.config_index % total)) {
+        state.exhausted.push(state.config_index % total);
+      }
+      const nextIdx = findNextConfig({ ...state, config_index: (state.config_index + 1) % total });
+      state.config_index = nextIdx;
+      state.page = 1;
+    } else {
+      state.page += 1;
+    }
+
+    await saveState(state);
+    const next = SEARCH_CONFIGS[state.config_index % total];
+    console.log(`Next run: ${next.label}, page ${state.page}`);
+    console.log(`Exhausted configs (${state.exhausted.length}): ${state.exhausted.map(i => SEARCH_CONFIGS[i].label).join(', ') || 'none'}`);
 
   } catch (err) {
     console.error('❌ Sync failed:', err.message);
