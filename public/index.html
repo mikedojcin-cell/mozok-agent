@@ -210,15 +210,15 @@
         <h3>✉️ Email Templates</h3>
         <div style="margin-bottom:12px">
           <div style="font-size:12px;color:#4fa3e0;font-weight:600;margin-bottom:6px">EMAIL 1 — Cold Outreach (Day 1)</div>
-          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> quick question, [First Name]<br>Most business owners know they should be more active on social media — they just never get around to it. Plans start at $497/month. Worth a 15-minute call?</div>
+          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> quick question, [First Name]<br><strong>Ask:</strong> "Do you handle your social yourself or does someone help you?" — gets a reply, not a commitment.</div>
         </div>
         <div style="margin-bottom:12px;border-top:1px solid #2a2f3d;padding-top:12px">
           <div style="font-size:12px;color:#f7ba1e;font-weight:600;margin-bottom:6px">EMAIL 2 — Follow Up (Day 5 — auto-queued)</div>
-          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> Re: quick question, [First Name]<br>Just circling back — if social media has been on your list but keeps getting pushed, that's exactly who Mozok is built for.</div>
+          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> Re: quick question, [First Name]<br><strong>Ask:</strong> "How's handling it yourself going?" — opens a conversation, mentions $497 and no contracts.</div>
         </div>
         <div style="border-top:1px solid #2a2f3d;padding-top:12px">
           <div style="font-size:12px;color:#e74c3c;font-weight:600;margin-bottom:6px">EMAIL 3 — Final (Day 10 — auto-queued)</div>
-          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> Last note — [First Name]<br>Last note from me. If timing isn't right, no worries — we're at mozok.co whenever you're ready.</div>
+          <div style="font-size:12px;color:#888;line-height:1.6"><strong>Subject:</strong> Last note — [First Name]<br>Soft close. Leaves the door open. No pressure.</div>
         </div>
       </div>
     </div>
@@ -533,12 +533,12 @@ async function sendEmails() {
 
     if (filter === 'NEW') {
       subject = `quick question, ${firstName}`;
-      body = `Hi ${firstName},\n\nMost business owners I talk to know they should be more active on social media — they just never get around to it.\n\nBetween running the operation and everything else on your plate, it keeps getting pushed to tomorrow.\n\nThat's exactly what Mozok solves. We handle your content, scheduling, and posting across LinkedIn, Facebook, and Instagram every month. You approve by email before anything goes live. That's it.\n\nNo logins. No long-term contracts. Plans start at $497/month.\n\nWorth a 15-minute call?\n\nMike\nmozok.co | ${phone}`;
+      body = `Hi ${firstName},\n\nQuick question before I say more — do you handle your social media yourself, or does someone help you with it?\n\nAsking because I run Mozok, and we handle social media completely for business owners who know they should be posting but never get around to it.\n\nJust curious which camp you're in.\n\nMike\nmozok.co | ${phone}`;
       newStatus = 'EMAIL_1_SENT';
       dateField = 'email1_sent_at';
     } else if (filter === 'EMAIL_1_SENT_DUE') {
       subject = `Re: quick question, ${firstName}`;
-      body = `Hi ${firstName},\n\nJust circling back on my note from earlier this week.\n\nIf social media has been on your to-do list but keeps getting pushed — that's exactly who we built Mozok for.\n\nHappy to show you how it works in 15 minutes.\n\nMike\nmozok.co | ${phone}`;
+      body = `Hi ${firstName},\n\nFollowing up on my note from last week.\n\nIf you're handling social yourself — how's that going? Most owners I talk to are posting inconsistently or not at all, and they know it.\n\nWe take it completely off your plate. You approve posts by email, we handle everything else. Plans start at $497/month, no contracts.\n\nWorth a quick conversation?\n\nMike\nmozok.co | ${phone}`;
       newStatus = 'EMAIL_2_SENT';
       dateField = 'email2_sent_at';
     } else {
