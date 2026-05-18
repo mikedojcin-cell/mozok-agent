@@ -444,6 +444,8 @@ app.post('/api/generate-post', async (req, res) => {
 
 // ─── CATCH ALL ────────────────────────────────────────────────────────────────
 
+app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
+app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
