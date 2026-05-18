@@ -132,6 +132,7 @@
         <div class="stat-box"><div class="stat-num" id="ps-total">-</div><div class="stat-lbl">Total Contacts</div></div>
         <div class="stat-box"><div class="stat-num orange" id="ps-due">-</div><div class="stat-lbl">Follow-Up Due</div></div>
         <div class="stat-box"><div class="stat-num green" id="ps-opened">-</div><div class="stat-lbl">Opened Email</div></div>
+        <div class="stat-box"><div class="stat-num" style="color:#f7ba1e;" id="ps-clicked">-</div><div class="stat-lbl">🔥 Clicked Link</div></div>
         <div class="stat-box"><div class="stat-num" id="ps-e1">-</div><div class="stat-lbl">Email 1 Sent</div></div>
         <div class="stat-box"><div class="stat-num" id="ps-done">-</div><div class="stat-lbl">Sequence Done</div></div>
       </div>
@@ -153,6 +154,10 @@
         <div class="pipe-col">
           <div class="pipe-col-header" style="color:#f7ba1e;">⏰ Follow-Up Due<span id="pc-due" class="pipe-count">-</span></div>
           <div class="pipe-col-body" id="pl-due"><div style="color:#555;font-size:12px">Loading...</div></div>
+        </div>
+        <div class="pipe-col">
+          <div class="pipe-col-header" style="color:#f7ba1e;">🔥 Clicked Link<span id="pc-clicked" class="pipe-count">-</span></div>
+          <div class="pipe-col-body" id="pl-clicked"><div style="color:#555;font-size:12px">Loading...</div></div>
         </div>
         <div class="pipe-col">
           <div class="pipe-col-header" style="color:#6ccb5f;">👁 Opened Email<span id="pc-opened" class="pipe-count">-</span></div>
@@ -375,9 +380,11 @@ async function loadPipeline() {
 
     // Update stats
     const due = (p.email2_due||[]).length + (p.email3_due||[]).length;
+    const clicked = (p.clicked||[]).length;
     document.getElementById('ps-total').textContent = data.total;
     document.getElementById('ps-due').textContent = due;
     document.getElementById('ps-opened').textContent = (p.opened||[]).length;
+    document.getElementById('ps-clicked').textContent = clicked;
     document.getElementById('ps-e1').textContent = (p.email1_sent||[]).length;
     document.getElementById('ps-done').textContent = (p.email3_sent||[]).length;
 
@@ -385,6 +392,7 @@ async function loadPipeline() {
     document.getElementById('pc-ready').textContent = (p.ready||[]).length;
     document.getElementById('pc-e1').textContent = (p.email1_sent||[]).length;
     document.getElementById('pc-due').textContent = due;
+    document.getElementById('pc-clicked').textContent = clicked;
     document.getElementById('pc-opened').textContent = (p.opened||[]).length;
 
     // Render columns
@@ -392,10 +400,11 @@ async function loadPipeline() {
     renderPipeCol('pl-e1', p.email1_sent||[], 'e1');
     const dueAll = [...(p.email2_due||[]), ...(p.email3_due||[])];
     renderPipeCol('pl-due', dueAll, 'due');
+    renderPipeCol('pl-clicked', p.clicked||[], 'clicked');
     renderPipeCol('pl-opened', p.opened||[], 'opened');
 
     // Action required
-    renderActions(dueAll, p.opened||[]);
+    renderActions(dueAll, p.opened||[], p.clicked||[]);
 
   } catch(e) { console.error('Pipeline error:', e); }
 }
@@ -407,23 +416,28 @@ function renderPipeCol(elId, contacts, type) {
     const name = `${c.firstname||''} ${c.lastname||''}`.trim();
     const daysAgo = c.email1_sent_at ? Math.floor((Date.now()-new Date(c.email1_sent_at))/86400000) : null;
     const openMeta = c.open_count > 0 ? `<div class="pipe-opened">👁 Opened ${c.open_count}x — ${c.last_opened_at ? new Date(c.last_opened_at).toLocaleDateString() : ''}</div>` : '';
+    const clickMeta = c.click_count > 0 ? `<div style="color:#f7ba1e;font-size:10px;margin-top:2px;">🔥 Clicked ${c.click_count}x — HOT</div>` : '';
     const timeMeta = daysAgo !== null ? `<div class="pipe-meta">Email 1 sent ${daysAgo}d ago</div>` : '';
     return `<div class="pipe-contact">
       <div class="pipe-name">${name}</div>
       <div class="pipe-company">${c.company||''}</div>
-      ${timeMeta}${openMeta}
+      ${timeMeta}${clickMeta}${openMeta}
     </div>`;
   }).join('');
 }
 
-function renderActions(due, opened) {
+function renderActions(due, opened, clicked) {
+  clicked = clicked || [];
   const el = document.getElementById('actionRequired');
   let html = '';
+  if (clicked.length) {
+    html += `<div style="background:#2b1800;border:1px solid #ca5010;color:#f7ba1e;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:10px;">🔥 <strong>${clicked.length} contact${clicked.length>1?'s':''} clicked your link</strong> — these are your hottest prospects. Call them today. <button class="btn orange" style="margin-top:0;padding:5px 12px;margin-left:10px;font-size:12px" onclick="show('email');document.getElementById('emailFilter').value='EMAIL_1_SENT_DUE';loadContacts()">Send Email 2 →</button></div>`;
+  }
   if (opened.length) {
-    html += `<div class="warn" style="margin-bottom:10px">🔥 ${opened.length} contact${opened.length>1?'s':''} opened your email — call them today! <button class="btn orange" style="margin-top:0;padding:5px 12px;margin-left:10px;font-size:12px" onclick="show('email');document.getElementById('emailFilter').value='EMAIL_1_SENT_DUE';loadContacts()">View & Send Email 2 →</button></div>`;
+    html += `<div class="warn" style="margin-bottom:10px">👁 ${opened.length} contact${opened.length>1?'s':''} opened your email. <button class="btn orange" style="margin-top:0;padding:5px 12px;margin-left:10px;font-size:12px" onclick="show('email');document.getElementById('emailFilter').value='EMAIL_1_SENT_DUE';loadContacts()">View & Send Email 2 →</button></div>`;
   }
   if (due.length) {
-    html += `<div class="info" style="margin-bottom:10px">⏰ ${due.length} contact${due.length>1?'s':''} ready for follow-up email — ${due.length > 5 ? 'more than 5 days since last email' : 'send today'}. <button class="btn blue" style="margin-top:0;padding:5px 12px;margin-left:10px;font-size:12px" onclick="show('email');document.getElementById('emailFilter').value='EMAIL_1_SENT_DUE';loadContacts()">Send Follow-Up →</button></div>`;
+    html += `<div class="info" style="margin-bottom:10px">⏰ ${due.length} contact${due.length>1?'s':''} ready for follow-up. <button class="btn blue" style="margin-top:0;padding:5px 12px;margin-left:10px;font-size:12px" onclick="show('email');document.getElementById('emailFilter').value='EMAIL_1_SENT_DUE';loadContacts()">Send Follow-Up →</button></div>`;
   }
   if (!html) html = '<div style="color:#555;font-size:13px">No actions required right now. Keep sending Email 1 to new contacts.</div>';
   el.innerHTML = html;
