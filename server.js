@@ -253,7 +253,13 @@ app.post('/api/graph', async (req, res) => {
         ? `\n\n<img src="${BASE_URL}/track/open/${contactId}" width="1" height="1" style="display:none" />`
         : '';
 
-      const htmlBody = emailBody.replace(/\n/g, '<br>') + trackingPixel;
+      // Convert plain text to HTML and make tracked links clickable
+      const htmlBody = emailBody
+        .replace(/\n/g, '<br>')
+        .replace(
+          /(https:\/\/mozok-agent\.onrender\.com\/track\/click\/[^\s<|]+)/g,
+          '<a href="$1" style="color:#1D9E75;">mozok.co</a>'
+        ) + trackingPixel;
 
       const msgBody = {
         message: {
