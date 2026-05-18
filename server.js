@@ -160,7 +160,7 @@ app.get('/track/open/:contactId', async (req, res) => {
 app.get('/api/pipeline', async (req, res) => {
   try {
     const [contacts, events] = await Promise.all([
-      supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count'),
+      supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at'),
       supabase('GET', '/rest/v1/email_events?order=created_at.desc&limit=200')
     ]);
 
@@ -172,17 +172,20 @@ app.get('/api/pipeline', async (req, res) => {
       email2_sent: [],
       email3_due: [],
       email3_sent: [],
+      clicked: [],
       opened: []
     };
 
     for (const c of contacts) {
+      const hasClicked = (c.click_count || 0) > 0;
       const hasOpened = c.open_count > 0;
       const e1sent = c.email1_sent_at ? new Date(c.email1_sent_at) : null;
       const e2sent = c.email2_sent_at ? new Date(c.email2_sent_at) : null;
       const e1days = e1sent ? (now - e1sent) / 86400000 : null;
       const e2days = e2sent ? (now - e2sent) / 86400000 : null;
 
-      if (hasOpened) pipeline.opened.push(c);
+      if (hasClicked) pipeline.clicked.push(c);
+      else if (hasOpened) pipeline.opened.push(c);
       else if (c.status === 'EMAIL_3_SENT') pipeline.email3_sent.push(c);
       else if (c.status === 'EMAIL_2_SENT' && e2days >= 5) pipeline.email3_due.push(c);
       else if (c.status === 'EMAIL_2_SENT') pipeline.email2_sent.push(c);
