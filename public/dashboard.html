@@ -644,8 +644,11 @@ function renderDetailPanel() {
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
             <div class="sec-label" style="margin:0;">Recent posts</div>
             <div style="display:flex;gap:6px;">
+              <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="copyOnboardingLink('${c.id}', '${c.name}')">
+                <i class="ti ti-link"></i> Onboarding link
+              </button>
               <button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="connectMeta('${c.id}')">
-                <i class="ti ti-brand-facebook"></i> Connect Facebook
+                <i class="ti ti-brand-facebook"></i> Connect FB
               </button>
               <button class="btn btn-primary" style="font-size:11px;padding:4px 10px;" onclick="syncMeta('${c.id}')">
                 <i class="ti ti-refresh"></i> Sync
@@ -794,6 +797,15 @@ async function addLead() {
   document.getElementById('nl-contact').value = '';
   document.getElementById('nl-value').value = '';
   refreshAll();
+}
+
+function copyOnboardingLink(clientId, clientName) {
+  const url = `https://mozok-agent.onrender.com/onboarding.html?client=${clientId}`;
+  navigator.clipboard.writeText(url).then(() => {
+    alert(`Onboarding link for ${clientName} copied!\n\n${url}\n\nSend this to your client — it will show their name, plan, and the right content tab automatically.`);
+  }).catch(() => {
+    prompt(`Copy this onboarding link for ${clientName}:`, url);
+  });
 }
 
 function connectMeta(clientId) {
