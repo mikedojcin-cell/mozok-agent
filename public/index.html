@@ -546,12 +546,12 @@ async function sendEmails() {
     let subject, body, newStatus, dateField;
 
     if (filter === 'NEW') {
-      subject = `quick question, ${firstName}`;
+      subject = `Quick question, ${firstName}`;
       body = `Hi ${firstName},\n\nQuick question before I say more — do you handle your social media yourself, or does someone help you with it?\n\nAsking because I run Mozok, and we handle social media completely for business owners who know they should be posting but never get around to it.\n\nJust curious which camp you're in.\n\nMike\nhttps://mozok-agent.onrender.com/track/click/${contact.id}?url=https://mozok.co | ${phone}`;
       newStatus = 'EMAIL_1_SENT';
       dateField = 'email1_sent_at';
     } else if (filter === 'EMAIL_1_SENT_DUE') {
-      subject = `Re: quick question, ${firstName}`;
+      subject = `Re: Quick question, ${firstName}`;
       body = `Hi ${firstName},\n\nFollowing up on my note from last week.\n\nIf you're handling social yourself — how's that going? Most owners I talk to are posting inconsistently or not at all, and they know it.\n\nWe take it completely off your plate. You approve posts by email, we handle everything else. Plans start at $497/month, no contracts.\n\nSee what we do: https://mozok-agent.onrender.com/track/click/${contact.id}?url=https://mozok.co\n\nWorth a quick conversation?\n\nMike\n${phone}`;
       newStatus = 'EMAIL_2_SENT';
       dateField = 'email2_sent_at';
