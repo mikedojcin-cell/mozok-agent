@@ -93,6 +93,29 @@ async function metaGet(url) {
   });
 }
 
+// ─── EMAIL CLICK TRACKING ─────────────────────────────────────────────────────
+
+app.get('/track/click/:contactId', async (req, res) => {
+  const { contactId } = req.params;
+  const redirectUrl = req.query.url || 'https://mozok.co';
+  try {
+    await supabase('POST', '/rest/v1/email_events', {
+      contact_id: contactId,
+      event_type: 'click',
+      metadata: redirectUrl
+    });
+    const contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=click_count`);
+    const currentCount = contacts[0]?.click_count || 0;
+    await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
+      click_count: currentCount + 1,
+      last_clicked_at: new Date().toISOString()
+    });
+  } catch(e) {
+    console.error('Track click error:', e.message);
+  }
+  res.redirect(redirectUrl);
+});
+
 // ─── EMAIL OPEN TRACKING ──────────────────────────────────────────────────────
 
 // 1x1 transparent GIF
