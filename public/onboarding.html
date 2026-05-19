@@ -51,7 +51,8 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
 .step-img { background: #f5f6f8; border: 1px solid #e8eaed; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #999; margin-top: 8px; font-style: italic; }
 
 .tip { background: #E1F5EE; border-radius: 8px; padding: 12px 14px; font-size: 12px; color: #085041; margin-top: 16px; display: flex; gap: 8px; align-items: flex-start; line-height: 1.55; }
-.tip-icon { flex-shrink: 0; font-size: 14px; }
+.tip-icon { flex-shrink: 0; font-size: 14px; margin-top: 1px; }
+.tip span { flex: 1; }
 
 .done-btn { background: #1D9E75; color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; margin-top: 16px; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 6px; }
 .done-btn:hover { background: #085041; }
@@ -187,7 +188,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
           </div>
         </div>
       </div>
-      <div class="tip"><div class="tip-icon">💡</div>Make sure your Instagram account is set to <strong>Professional/Business</strong> — not personal. Go to Instagram Settings → Account → Switch to Professional Account if needed.</div>
+      <div class="tip"><div class="tip-icon">💡</div><span>Make sure your Instagram account is set to <strong>Professional/Business</strong> — not personal. Go to Instagram Settings → Account → Switch to Professional Account if needed.</span></div>
       <button class="done-btn" onclick="markDone(1)">✓ Mark as complete</button>
     </div>
   </div>
