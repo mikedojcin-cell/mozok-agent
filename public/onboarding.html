@@ -485,10 +485,22 @@ async function loadClientInfo() {
     }
     if (planContent) planContent.classList.add('active');
 
-    // Add note to other plan tabs
+    // Dim other plan tabs and disable their complete buttons
     document.querySelectorAll('.plan-tab').forEach(tab => {
       if (tab.dataset.plan !== plan) {
         tab.style.opacity = '0.5';
+      }
+    });
+    document.querySelectorAll('.plan-content').forEach(content => {
+      if (content.id !== 'plan-' + plan) {
+        const btn = content.querySelector('.done-btn');
+        if (btn) {
+          btn.style.opacity = '0.3';
+          btn.style.pointerEvents = 'none';
+          btn.textContent = '⚠ Not your plan';
+          btn.style.background = '#ccc';
+          btn.style.cursor = 'not-allowed';
+        }
       }
     });
 
