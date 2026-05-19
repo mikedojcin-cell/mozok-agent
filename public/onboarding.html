@@ -511,7 +511,12 @@ async function loadClientInfo() {
 
     // Hide platforms not in their plan
     if (plan === 'starter') {
-      ['section-3','section-4'].forEach(id => {
+      const msgs = {
+        'section-2': '⚠ LinkedIn is not included in your Starter plan. Upgrade to Growth to unlock it.',
+        'section-3': '⚠ TikTok is not included in your Starter plan. Upgrade to Pro to unlock it.',
+        'section-4': '⚠ YouTube is not included in your Starter plan. Upgrade to Pro to unlock it.'
+      };
+      ['section-2','section-3','section-4'].forEach(id => {
         const section = document.getElementById(id);
         section.style.opacity = '0.5';
         section.style.pointerEvents = 'none';
@@ -521,7 +526,7 @@ async function loadClientInfo() {
         if (body) {
           const banner = document.createElement('div');
           banner.style.cssText = 'background:#f5f5f5;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;font-size:13px;color:#999;margin-bottom:16px;';
-          banner.textContent = '⚠ This platform is not included in your Starter plan. Upgrade to Growth or Pro to unlock it.';
+          banner.textContent = msgs[id];
           body.insertBefore(banner, body.firstChild);
         }
       });
