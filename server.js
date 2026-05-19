@@ -331,7 +331,7 @@ app.post('/api/graph', async (req, res) => {
 
 app.get('/auth/meta', (req, res) => {
   const { clientId } = req.query;
-  const scope = 'pages_show_list,business_management';
+  const scope = 'pages_show_list,business_management,instagram_basic,instagram_content_publish,instagram_manage_comments,instagram_business_basic';
   const url = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(META_REDIRECT)}&scope=${scope}&state=${clientId}`;
   res.redirect(url);
 });
