@@ -9,8 +9,8 @@ const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const META_APP_ID = process.env.META_APP_ID;
 const META_APP_SECRET = process.env.META_APP_SECRET;
-const META_REDIRECT = 'https://mozok-agent.onrender.com/auth/meta/callback';
-const BASE_URL = 'https://mozok-agent.onrender.com';
+const META_REDIRECT = 'https://app.mozok.co/auth/meta/callback';
+const BASE_URL = 'https://app.mozok.co';
 
 async function supabase(method, endpoint, body) {
   return new Promise((resolve, reject) => {
