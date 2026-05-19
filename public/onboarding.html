@@ -570,7 +570,7 @@ async function submitContact() {
   btn.disabled = true;
 
   try {
-    const res = await fetch('https://mozok-agent.onrender.com/api/contact', {
+    const res = await fetch('https://app.mozok.co/api/contact', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, message })
