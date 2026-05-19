@@ -425,7 +425,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
         <div class="tip" style="margin-top:16px;"><div class="tip-icon">⭐</div>Pro plan includes bi-weekly strategy calls, dedicated account manager, and priority 24-hour turnaround on all approvals.</div>
       </div>
 
-      <button class="done-btn" onclick="markDone(5)" style="margin-top:20px;">✓ Mark as complete</button>
+      <button class="done-btn" id="step5-btn" onclick="markDone(5)" style="margin-top:20px;display:none;">✓ Mark as complete</button>
     </div>
   </div>
 
@@ -485,6 +485,10 @@ async function loadClientInfo() {
       planTab.textContent = planTab.textContent + ' ✓ Your plan';
     }
     if (planContent) planContent.classList.add('active');
+
+    // Show Mark as complete button for their plan on load
+    const step5btn = document.getElementById('step5-btn');
+    if (step5btn) step5btn.style.display = 'flex';
 
     // Dim other plan tabs and disable their complete buttons
     document.querySelectorAll('.plan-tab').forEach(tab => {
@@ -575,25 +579,10 @@ function showPlan(plan, btn) {
   btn.classList.add('active');
   document.getElementById('plan-' + plan).classList.add('active');
 
-  // If this isn't the client's plan, disable the complete button
-  const content = document.getElementById('plan-' + plan);
-  const doneBtn = content.querySelector('.done-btn');
-  if (doneBtn) {
-    if (clientPlan && plan !== clientPlan) {
-      doneBtn.style.opacity = '0.3';
-      doneBtn.style.pointerEvents = 'none';
-      doneBtn.textContent = '⚠ Not your plan';
-      doneBtn.style.background = '#ccc';
-      doneBtn.style.cursor = 'not-allowed';
-    } else {
-      doneBtn.style.opacity = '1';
-      doneBtn.style.pointerEvents = 'auto';
-      doneBtn.style.background = '#1D9E75';
-      doneBtn.style.cursor = 'pointer';
-      if (!doneBtn.classList.contains('completed')) {
-        doneBtn.textContent = '✓ Mark as complete';
-      }
-    }
+  // Show Mark as complete only on their own plan
+  const step5btn = document.getElementById('step5-btn');
+  if (step5btn && !step5btn.classList.contains('completed')) {
+    step5btn.style.display = (clientPlan && plan === clientPlan) ? 'flex' : 'none';
   }
 }
 </script>
