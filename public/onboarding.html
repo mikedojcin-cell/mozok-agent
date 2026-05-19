@@ -98,7 +98,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
 .cta-box p { font-size: 13px; color: rgba(255,255,255,0.4); margin-bottom: 20px; }
 .cta-box a { color: #1D9E75; text-decoration: none; }
 .cta-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-.cta-btn-primary { background: #1D9E75; color: #fff; border: none; border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; text-decoration: none; display: inline-block; }
+.cta-btn-primary { background: #fff; color: #1D9E75; border: none; border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; text-decoration: none; display: inline-block; letter-spacing: -0.2px; }
 .cta-btn-secondary { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 12px 24px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; text-decoration: none; display: inline-block; }
 </style>
 </head>
@@ -228,7 +228,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
           </div>
         </div>
       </div>
-      <div class="tip"><div class="tip-icon">💡</div><strong>Content Admin</strong> means we can post and view analytics — we cannot change your page settings, add/remove other admins, or access billing. You stay in full control.</div>
+      <div class="tip"><div class="tip-icon">💡</div><span><strong>Content Admin</strong> means we can post and view analytics — we cannot change your page settings, add/remove other admins, or access billing. You stay in full control.</span></div>
       <button class="done-btn" onclick="markDone(2)">✓ Mark as complete</button>
     </div>
   </div>
@@ -275,7 +275,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
           </div>
         </div>
       </div>
-      <div class="tip"><div class="tip-icon">💡</div>Don't have a TikTok account yet? No problem — email us at <code>info@mozok.co</code> and we'll help you set one up as part of your onboarding.</div>
+      <div class="tip"><div class="tip-icon">💡</div><span>Don't have a TikTok account yet? No problem — email us at <code>info@mozok.co</code> and we'll help you set one up as part of your onboarding.</span></div>
       <button class="done-btn" onclick="markDone(3)">✓ Mark as complete</button>
     </div>
   </div>
@@ -322,7 +322,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
           </div>
         </div>
       </div>
-      <div class="tip"><div class="tip-icon">💡</div>Don't have a YouTube channel yet? We can set one up for you as part of onboarding on the Growth or Pro plan. Email <code>info@mozok.co</code> to get started.</div>
+      <div class="tip"><div class="tip-icon">💡</div><span>Don't have a YouTube channel yet? We can set one up for you as part of onboarding on the Growth or Pro plan. Email <code>info@mozok.co</code> to get started.</span></div>
       <button class="done-btn" onclick="markDone(4)">✓ Mark as complete</button>
     </div>
   </div>
@@ -484,13 +484,33 @@ async function loadClientInfo() {
 
     // Hide platforms not in their plan
     if (plan === 'starter') {
-      document.getElementById('section-3').style.opacity = '0.4';
-      document.getElementById('section-4').style.opacity = '0.4';
-      document.getElementById('section-3').querySelector('.section-sub').textContent = 'Not included in Starter plan';
-      document.getElementById('section-4').querySelector('.section-sub').textContent = 'Not included in Starter plan';
+      ['section-3','section-4'].forEach(id => {
+        const section = document.getElementById(id);
+        section.style.opacity = '0.5';
+        section.style.pointerEvents = 'none';
+        const btn = section.querySelector('.done-btn');
+        if (btn) btn.style.display = 'none';
+        const body = section.querySelector('.section-body');
+        if (body) {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'background:#f5f5f5;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;font-size:13px;color:#999;margin-bottom:16px;';
+          banner.textContent = '⚠ This platform is not included in your Starter plan. Upgrade to Growth or Pro to unlock it.';
+          body.insertBefore(banner, body.firstChild);
+        }
+      });
     } else if (plan === 'growth') {
-      document.getElementById('section-4').style.opacity = '0.4';
-      document.getElementById('section-4').querySelector('.section-sub').textContent = 'Not included in Growth plan';
+      const section = document.getElementById('section-4');
+      section.style.opacity = '0.5';
+      section.style.pointerEvents = 'none';
+      const btn = section.querySelector('.done-btn');
+      if (btn) btn.style.display = 'none';
+      const body = section.querySelector('.section-body');
+      if (body) {
+        const banner = document.createElement('div');
+        banner.style.cssText = 'background:#f5f5f5;border:1px solid #e0e0e0;border-radius:8px;padding:12px 16px;font-size:13px;color:#999;margin-bottom:16px;';
+        banner.textContent = '⚠ YouTube is not included in your Growth plan. Upgrade to Pro to unlock it.';
+        body.insertBefore(banner, body.firstChild);
+      }
     }
 
   } catch(e) {
