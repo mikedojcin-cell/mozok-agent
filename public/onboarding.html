@@ -434,7 +434,7 @@ body { font-family: 'Inter', sans-serif; background: #f5f6f8; color: #111; }
     <h3>You're all set. Let's get posting.</h3>
     <p>Once we have platform access confirmed we'll send your first content calendar within 48 hours for your approval.<br>Questions? We're always here.</p>
     <div class="cta-actions">
-      <button class="cta-btn-primary" onclick="copyEmail(this)">Email us — info@mozok.co</button>
+      <button class="cta-btn-primary" onclick="document.getElementById('contact-modal').style.display='flex'">Send us a message</button>
       <a href="https://mozok.co" class="cta-btn-secondary">Visit mozok.co</a>
     </div>
     <p style="margin-top:16px;font-size:12px;color:rgba(255,255,255,0.25);">226-214-1660 (CA) &nbsp;·&nbsp; 248-800-3405 (US)</p>
@@ -552,6 +552,47 @@ async function loadClientInfo() {
 
 loadClientInfo();
 
+async function submitContact() {
+  const name = document.getElementById('cf-name').value.trim();
+  const email = document.getElementById('cf-email').value.trim();
+  const message = document.getElementById('cf-message').value.trim();
+  const errEl = document.getElementById('cf-error');
+  const btn = document.getElementById('cf-submit');
+
+  if (!name || !email || !message) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Please fill in all fields before sending.';
+    return;
+  }
+
+  errEl.style.display = 'none';
+  btn.textContent = 'Sending...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('https://mozok-agent.onrender.com/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, message })
+    });
+    const data = await res.json();
+    if (data.success) {
+      document.getElementById('contact-form').style.display = 'none';
+      document.getElementById('contact-success').style.display = 'block';
+    } else {
+      errEl.style.display = 'block';
+      errEl.textContent = 'Something went wrong. Please email us directly at info@mozok.co';
+      btn.textContent = 'Send message';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Could not send message. Please email us at info@mozok.co';
+    btn.textContent = 'Send message';
+    btn.disabled = false;
+  }
+}
+
 function copyEmail(btn) {
   navigator.clipboard.writeText('info@mozok.co').then(() => {
     const orig = btn.textContent;
@@ -601,5 +642,42 @@ function showPlan(plan, btn) {
   }
 }
 </script>
+<!-- CONTACT MODAL -->
+<div id="contact-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:#fff;border-radius:16px;padding:32px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.2);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div>
+        <div style="font-size:18px;font-weight:700;color:#111;letter-spacing:-0.3px;">Send us a message</div>
+        <div style="font-size:12px;color:#999;margin-top:3px;">We'll get back to you within 24 hours</div>
+      </div>
+      <button onclick="document.getElementById('contact-modal').style.display='none'" style="background:none;border:none;font-size:22px;color:#bbb;cursor:pointer;padding:4px;">✕</button>
+    </div>
+
+    <div id="contact-success" style="display:none;background:#E1F5EE;border-radius:10px;padding:20px;text-align:center;">
+      <div style="font-size:24px;margin-bottom:8px;">✅</div>
+      <div style="font-size:15px;font-weight:600;color:#085041;">Message sent!</div>
+      <div style="font-size:13px;color:#0F6E56;margin-top:4px;">We'll be in touch within 24 hours.</div>
+      <button onclick="document.getElementById('contact-modal').style.display='none'" style="margin-top:16px;background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Close</button>
+    </div>
+
+    <div id="contact-form">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:500;color:#666;display:block;margin-bottom:5px;">Your name</label>
+        <input id="cf-name" placeholder="e.g. Sarah Johnson" style="width:100%;padding:10px 12px;border:1.5px solid #e8eaed;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none;color:#111;" onfocus="this.style.borderColor='#1D9E75'" onblur="this.style.borderColor='#e8eaed'" />
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:500;color:#666;display:block;margin-bottom:5px;">Your email</label>
+        <input id="cf-email" type="email" placeholder="e.g. sarah@yourbusiness.com" style="width:100%;padding:10px 12px;border:1.5px solid #e8eaed;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none;color:#111;" onfocus="this.style.borderColor='#1D9E75'" onblur="this.style.borderColor='#e8eaed'" />
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:12px;font-weight:500;color:#666;display:block;margin-bottom:5px;">Your message</label>
+        <textarea id="cf-message" placeholder="What can we help you with?" rows="4" style="width:100%;padding:10px 12px;border:1.5px solid #e8eaed;border-radius:8px;font-size:14px;font-family:'Inter',sans-serif;outline:none;resize:vertical;color:#111;" onfocus="this.style.borderColor='#1D9E75'" onblur="this.style.borderColor='#e8eaed'"></textarea>
+      </div>
+      <div id="cf-error" style="display:none;background:#FCEBEB;border-radius:8px;padding:10px 14px;font-size:12px;color:#791F1F;margin-bottom:14px;"></div>
+      <button onclick="submitContact()" id="cf-submit" style="width:100%;background:#1D9E75;color:#fff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;">Send message</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
