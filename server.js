@@ -388,6 +388,52 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   }
 });
 
+// ─── CONTACT FORM ─────────────────────────────────────────────────────────────
+
+app.post('/api/contact', async (req, res) => {
+  const { name, email, message } = req.body;
+  if (!name || !email || !message) return res.json({ error: 'Missing fields' });
+
+  try {
+    const tokenRes = await getToken(
+      '26b2d778-d390-4c96-9c8b-96cf1bf43c5d',
+      'c141d1d2-14a9-4a2a-b965-aca133a394f4',
+      process.env.MS_CLIENT_SECRET || 'kcP8Q~bQ1w49F4JiVUE3HJCiOYWqiw0FFJMp0ayl'
+    );
+    if (!tokenRes.access_token) return res.json({ error: 'Auth failed' });
+
+    const msgBody = {
+      message: {
+        subject: `New onboarding message from ${name}`,
+        body: {
+          contentType: 'html',
+          content: `
+            <div style="font-family:Arial,sans-serif;max-width:500px;">
+              <h2 style="color:#1D9E75;">New message from Mozok onboarding</h2>
+              <p><strong>Name:</strong> ${name}</p>
+              <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+              <p><strong>Message:</strong></p>
+              <p style="background:#f5f5f5;padding:12px;border-radius:8px;">${message.replace(/\n/g,'<br>')}</p>
+              <hr/>
+              <p style="color:#999;font-size:12px;">Sent from mozok-agent.onrender.com/onboarding.html</p>
+            </div>
+          `
+        },
+        toRecipients: [{ emailAddress: { address: 'info@mozok.co' } }],
+        from: { emailAddress: { address: 'mike@mozok.co' } },
+        replyTo: [{ emailAddress: { address: email, name } }]
+      },
+      saveToSentItems: true
+    };
+
+    const r = await graphCall(tokenRes.access_token, 'POST', '/v1.0/users/mike@mozok.co/sendMail', msgBody);
+    if (r.status === 202) return res.json({ success: true });
+    return res.json({ error: 'Send failed' });
+  } catch(e) {
+    return res.json({ error: e.message });
+  }
+});
+
 // ─── CLAUDE POST GENERATOR ────────────────────────────────────────────────────
 
 app.post('/api/generate-post', async (req, res) => {
