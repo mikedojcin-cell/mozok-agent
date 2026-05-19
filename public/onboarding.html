@@ -474,13 +474,23 @@ async function loadClientInfo() {
     // Update header
     document.getElementById('header-client').textContent = `${name} — Onboarding`;
 
-    // Pre-select correct plan tab
+    // Pre-select correct plan tab and mark others as "not your plan"
     document.querySelectorAll('.plan-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.plan-content').forEach(c => c.classList.remove('active'));
     const planTab = document.querySelector(`[data-plan="${plan}"]`);
     const planContent = document.getElementById('plan-' + plan);
-    if (planTab) planTab.classList.add('active');
+    if (planTab) {
+      planTab.classList.add('active');
+      planTab.textContent = planTab.textContent + ' ✓ Your plan';
+    }
     if (planContent) planContent.classList.add('active');
+
+    // Add note to other plan tabs
+    document.querySelectorAll('.plan-tab').forEach(tab => {
+      if (tab.dataset.plan !== plan) {
+        tab.style.opacity = '0.5';
+      }
+    });
 
     // Hide platforms not in their plan
     if (plan === 'starter') {
