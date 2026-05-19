@@ -466,6 +466,7 @@ async function loadClientInfo() {
     const client = data[0];
     const name = client.name;
     const plan = client.plan;
+    clientPlan = plan;
 
     // Update hero welcome message
     document.getElementById('hero-welcome').textContent = `Welcome, ${name}.`;
@@ -566,11 +567,34 @@ function markDone(n) {
   }
 }
 
+let clientPlan = null;
+
 function showPlan(plan, btn) {
   document.querySelectorAll('.plan-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.plan-content').forEach(c => c.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('plan-' + plan).classList.add('active');
+
+  // If this isn't the client's plan, disable the complete button
+  const content = document.getElementById('plan-' + plan);
+  const doneBtn = content.querySelector('.done-btn');
+  if (doneBtn) {
+    if (clientPlan && plan !== clientPlan) {
+      doneBtn.style.opacity = '0.3';
+      doneBtn.style.pointerEvents = 'none';
+      doneBtn.textContent = '⚠ Not your plan';
+      doneBtn.style.background = '#ccc';
+      doneBtn.style.cursor = 'not-allowed';
+    } else {
+      doneBtn.style.opacity = '1';
+      doneBtn.style.pointerEvents = 'auto';
+      doneBtn.style.background = '#1D9E75';
+      doneBtn.style.cursor = 'pointer';
+      if (!doneBtn.classList.contains('completed')) {
+        doneBtn.textContent = '✓ Mark as complete';
+      }
+    }
+  }
 }
 </script>
 </body>
