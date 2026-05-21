@@ -7,10 +7,56 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzU4OTcsImV4cCI6MjA2MTk1MTg5N30.RfwtB2lq2kTaHvNLFQIqB1YFOVhBi9bWJv0DJTqoFcE';
 const META_APP_ID = process.env.META_APP_ID;
 const META_APP_SECRET = process.env.META_APP_SECRET;
 const META_REDIRECT = 'https://app.mozok.co/auth/meta/callback';
 const BASE_URL = 'https://app.mozok.co';
+
+// ─── AUTH MIDDLEWARE ──────────────────────────────────────────────────────────
+
+async function requireAuth(req, res, next) {
+  const auth = req.headers['authorization'];
+  if (!auth || !auth.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const token = auth.replace('Bearer ', '');
+  try {
+    const result = await new Promise((resolve, reject) => {
+      const r = https.request({
+        hostname: new URL(SUPABASE_URL).hostname,
+        path: '/auth/v1/user',
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'apikey': SUPABASE_ANON_KEY
+        }
+      }, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => { try { resolve({ status: res.statusCode, data: JSON.parse(d) }); } catch(e) { reject(e); } });
+      });
+      r.on('error', reject);
+      r.end();
+    });
+    if (result.status === 200 && result.data.id) {
+      req.user = result.data;
+      next();
+    } else {
+      res.status(401).json({ error: 'Invalid or expired token' });
+    }
+  } catch(e) {
+    res.status(401).json({ error: 'Auth check failed' });
+  }
+}
+
+// Protect API routes (tracking + contact form stay public)
+app.use('/api/pipeline', requireAuth);
+app.use('/api/graph', requireAuth);
+app.use('/api/meta', requireAuth);
+app.use('/api/generate-post', requireAuth);
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 async function supabase(method, endpoint, body) {
   return new Promise((resolve, reject) => {
@@ -93,7 +139,7 @@ async function metaGet(url) {
   });
 }
 
-// ─── EMAIL CLICK TRACKING ─────────────────────────────────────────────────────
+// ─── EMAIL CLICK TRACKING (public) ───────────────────────────────────────────
 
 app.get('/track/click/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -116,26 +162,18 @@ app.get('/track/click/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
-// ─── EMAIL OPEN TRACKING ──────────────────────────────────────────────────────
+// ─── EMAIL OPEN TRACKING (public) ────────────────────────────────────────────
 
-// 1x1 transparent GIF
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
 app.get('/track/open/:contactId', async (req, res) => {
   const { contactId } = req.params;
   try {
-    // Log the open event
     await supabase('POST', '/rest/v1/email_events', {
       contact_id: contactId,
       event_type: 'open',
       metadata: req.headers['user-agent'] || ''
     });
-    // Update contact open count and last opened
-    await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
-      last_opened_at: new Date().toISOString(),
-      open_count: 1 // Supabase will handle increment via RPC but this sets it
-    });
-    // Increment open count separately
     const contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=open_count`);
     const currentCount = contacts[0]?.open_count || 0;
     await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
@@ -145,7 +183,6 @@ app.get('/track/open/:contactId', async (req, res) => {
   } catch(e) {
     console.error('Track open error:', e.message);
   }
-  // Always return the pixel regardless
   res.writeHead(200, {
     'Content-Type': 'image/gif',
     'Content-Length': PIXEL.length,
@@ -155,25 +192,19 @@ app.get('/track/open/:contactId', async (req, res) => {
   res.end(PIXEL);
 });
 
-// ─── EMAIL PIPELINE API ───────────────────────────────────────────────────────
+// ─── EMAIL PIPELINE API (protected) ──────────────────────────────────────────
 
 app.get('/api/pipeline', async (req, res) => {
   try {
-    const [contacts, events] = await Promise.all([
+    const [contacts] = await Promise.all([
       supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at'),
       supabase('GET', '/rest/v1/email_events?order=created_at.desc&limit=200')
     ]);
 
     const now = Date.now();
     const pipeline = {
-      ready: [],
-      email1_sent: [],
-      email2_due: [],
-      email2_sent: [],
-      email3_due: [],
-      email3_sent: [],
-      clicked: [],
-      opened: []
+      ready: [], email1_sent: [], email2_due: [], email2_sent: [],
+      email3_due: [], email3_sent: [], clicked: [], opened: []
     };
 
     for (const c of contacts) {
@@ -200,7 +231,7 @@ app.get('/api/pipeline', async (req, res) => {
   }
 });
 
-// ─── SUPABASE CONTACT ROUTES ──────────────────────────────────────────────────
+// ─── GRAPH / SUPABASE API (protected) ────────────────────────────────────────
 
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
@@ -248,16 +279,14 @@ app.post('/api/graph', async (req, res) => {
       if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
       const token = tokenRes.access_token;
 
-      // Add tracking pixel to email body
       const trackingPixel = contactId
         ? `\n\n<img src="${BASE_URL}/track/open/${contactId}" width="1" height="1" style="display:none" />`
         : '';
 
-      // Convert plain text to HTML and make tracked links clickable
       const htmlBody = emailBody
         .replace(/\n/g, '<br>')
         .replace(
-          /(https:\/\/mozok-agent\.onrender\.com\/track\/click\/[^\s<|]+)/g,
+          /(https:\/\/app\.mozok\.co\/track\/click\/[^\s<|]+)/g,
           '<a href="$1" style="color:#1D9E75;">mozok.co</a>'
         ) + trackingPixel;
 
@@ -276,7 +305,6 @@ app.post('/api/graph', async (req, res) => {
     } catch(e) { return res.json({ error: e.message }); }
   }
 
-  // ─── MICROSOFT GRAPH ────────────────────────────────────────────────────────
   try {
     const tokenRes = await getToken(tenantId, clientId, clientSecret);
     if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
@@ -343,16 +371,14 @@ app.get('/auth/meta/callback', async (req, res) => {
     const tokenUrl = `https://graph.facebook.com/v19.0/oauth/access_token?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(META_REDIRECT)}&client_secret=${META_APP_SECRET}&code=${code}`;
     const tokenRes = await metaGet(tokenUrl);
     if (!tokenRes.access_token) return res.send('Error getting access token: ' + JSON.stringify(tokenRes));
-    await supabase('PATCH', `/rest/v1/clients?id=eq.${clientId}`, {
-      meta_access_token: tokenRes.access_token
-    });
+    await supabase('PATCH', `/rest/v1/clients?id=eq.${clientId}`, { meta_access_token: tokenRes.access_token });
     res.redirect('/dashboard.html?connected=true');
   } catch(e) {
     res.send('Error: ' + e.message);
   }
 });
 
-// ─── META INSIGHTS ────────────────────────────────────────────────────────────
+// ─── META INSIGHTS (protected) ───────────────────────────────────────────────
 
 app.get('/api/meta/pages/:clientId', async (req, res) => {
   const { clientId } = req.params;
@@ -388,12 +414,11 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   }
 });
 
-// ─── CONTACT FORM ─────────────────────────────────────────────────────────────
+// ─── CONTACT FORM (public) ────────────────────────────────────────────────────
 
 app.post('/api/contact', async (req, res) => {
   const { name, email, message } = req.body;
   if (!name || !email || !message) return res.json({ error: 'Missing fields' });
-
   try {
     const tokenRes = await getToken(
       '26b2d778-d390-4c96-9c8b-96cf1bf43c5d',
@@ -401,23 +426,12 @@ app.post('/api/contact', async (req, res) => {
       process.env.MS_CLIENT_SECRET || 'kcP8Q~bQ1w49F4JiVUE3HJCiOYWqiw0FFJMp0ayl'
     );
     if (!tokenRes.access_token) return res.json({ error: 'Auth failed' });
-
     const msgBody = {
       message: {
         subject: `New onboarding message from ${name}`,
         body: {
           contentType: 'html',
-          content: `
-            <div style="font-family:Arial,sans-serif;max-width:500px;">
-              <h2 style="color:#1D9E75;">New message from Mozok onboarding</h2>
-              <p><strong>Name:</strong> ${name}</p>
-              <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
-              <p><strong>Message:</strong></p>
-              <p style="background:#f5f5f5;padding:12px;border-radius:8px;">${message.replace(/\n/g,'<br>')}</p>
-              <hr/>
-              <p style="color:#999;font-size:12px;">Sent from mozok-agent.onrender.com/onboarding.html</p>
-            </div>
-          `
+          content: `<div style="font-family:Arial,sans-serif;max-width:500px;"><h2 style="color:#1D9E75;">New message from Mozok onboarding</h2><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p><p><strong>Message:</strong></p><p style="background:#f5f5f5;padding:12px;border-radius:8px;">${message.replace(/\n/g,'<br>')}</p></div>`
         },
         toRecipients: [{ emailAddress: { address: 'info@mozok.co' } }],
         from: { emailAddress: { address: 'mike@mozok.co' } },
@@ -425,7 +439,6 @@ app.post('/api/contact', async (req, res) => {
       },
       saveToSentItems: true
     };
-
     const r = await graphCall(tokenRes.access_token, 'POST', '/v1.0/users/mike@mozok.co/sendMail', msgBody);
     if (r.status === 202) return res.json({ success: true });
     return res.json({ error: 'Send failed' });
@@ -434,22 +447,19 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// ─── CLAUDE POST GENERATOR ────────────────────────────────────────────────────
+// ─── CLAUDE POST GENERATOR (protected) ───────────────────────────────────────
 
 app.post('/api/generate-post', async (req, res) => {
   const { prompt } = req.body;
   if (!prompt) return res.json({ error: 'No prompt provided' });
-
   const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY;
   if (!ANTHROPIC_KEY) return res.json({ error: 'ANTHROPIC_KEY not set in environment' });
-
   try {
     const data = JSON.stringify({
       model: 'claude-sonnet-4-5',
       max_tokens: 1000,
       messages: [{ role: 'user', content: prompt }]
     });
-
     const result = await new Promise((resolve, reject) => {
       const apiReq = https.request({
         hostname: 'api.anthropic.com',
@@ -464,32 +474,23 @@ app.post('/api/generate-post', async (req, res) => {
       }, r => {
         let d = '';
         r.on('data', c => d += c);
-        r.on('end', () => { 
-          console.log('Anthropic response status:', r.statusCode);
-          console.log('Anthropic response body:', d.substring(0, 500));
-          try { resolve(JSON.parse(d)); } catch(e) { reject(e); } 
-        });
+        r.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
       });
       apiReq.on('error', reject);
       apiReq.write(data);
       apiReq.end();
     });
-
     const text = result.content?.[0]?.text || '';
-    if (!text) {
-      const errMsg = result.error?.message || JSON.stringify(result);
-      console.log('No text returned:', errMsg);
-      return res.json({ error: errMsg });
-    }
+    if (!text) return res.json({ error: result.error?.message || 'No text returned' });
     res.json({ text });
   } catch(e) {
-    console.log('Generate post error:', e.message);
     res.json({ error: e.message });
   }
 });
 
 // ─── CATCH ALL ────────────────────────────────────────────────────────────────
 
+app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
