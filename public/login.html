@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozok — Sign In</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;700&display=swap');
+  :root { --teal: #1D9E75; --bg: #080d14; --border: #1e2535; --text: #e8e8e8; --muted: #666; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .wrap { width: 100%; max-width: 400px; padding: 24px; }
+  .logo-area { text-align: center; margin-bottom: 40px; }
+  .logo-k { font-family: 'DM Mono', monospace; font-size: 36px; color: var(--teal); font-weight: 500; letter-spacing: -1px; }
+  .logo-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 3px; margin-top: 4px; }
+  .card { background: #0d1420; border: 1px solid var(--border); border-radius: 12px; padding: 32px; }
+  .card h2 { font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .card p { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }
+  input { width: 100%; padding: 11px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 14px; outline: none; transition: border-color 0.15s; }
+  input:focus { border-color: var(--teal); }
+  input + label { margin-top: 18px; }
+  .btn { width: 100%; margin-top: 24px; padding: 12px; background: var(--teal); color: #fff; border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.15s; }
+  .btn:hover { opacity: 0.88; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .error { margin-top: 14px; padding: 10px 14px; background: rgba(231,76,60,0.1); border: 1px solid rgba(231,76,60,0.3); border-radius: 6px; color: #e74c3c; font-size: 13px; display: none; }
+  .spin { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: sp 0.7s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo-area">
+    <div class="logo-k">M/</div>
+    <div class="logo-label">Mozok Agent</div>
+  </div>
+  <div class="card">
+    <h2>Sign in</h2>
+    <p>Enter your credentials to access the dashboard.</p>
+    <label>Email</label>
+    <input type="email" id="email" placeholder="you@mozok.co" autocomplete="email">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn" id="loginBtn" onclick="login()">Sign In</button>
+    <div class="error" id="err"></div>
+  </div>
+</div>
+<script>
+  const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzU4OTcsImV4cCI6MjA2MTk1MTg5N30.RfwtB2lq2kTaHvNLFQIqB1YFOVhBi9bWJv0DJTqoFcE';
+
+  // If already logged in, redirect
+  const existing = localStorage.getItem('mozok_session');
+  if (existing) {
+    try {
+      const s = JSON.parse(existing);
+      if (s.expires_at > Date.now() / 1000) {
+        window.location.href = '/index.html';
+      }
+    } catch(e) {}
+  }
+
+  async function login() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('loginBtn');
+    const err = document.getElementById('err');
+    err.style.display = 'none';
+    if (!email || !password) { showErr('Please enter your email and password.'); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spin"></div> Signing in...';
+    try {
+      const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        localStorage.setItem('mozok_session', JSON.stringify({
+          access_token: data.access_token,
+          refresh_token: data.refresh_token,
+          expires_at: Math.floor(Date.now() / 1000) + data.expires_in,
+          user: data.user
+        }));
+        window.location.href = '/index.html';
+      } else {
+        showErr(data.error_description || data.msg || 'Invalid email or password.');
+      }
+    } catch(e) {
+      showErr('Connection error. Please try again.');
+    }
+    btn.disabled = false;
+    btn.innerHTML = 'Sign In';
+  }
+
+  function showErr(msg) {
+    const e = document.getElementById('err');
+    e.textContent = msg;
+    e.style.display = 'block';
+  }
+</script>
+</body>
+</html>
