@@ -7,7 +7,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYzNzU4OTcsImV4cCI6MjA2MTk1MTg5N30.RfwtB2lq2kTaHvNLFQIqB1YFOVhBi9bWJv0DJTqoFcE';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
 const META_APP_ID = process.env.META_APP_ID;
 const META_APP_SECRET = process.env.META_APP_SECRET;
 const META_REDIRECT = 'https://app.mozok.co/auth/meta/callback';
