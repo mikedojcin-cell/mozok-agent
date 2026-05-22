@@ -21,7 +21,6 @@
   body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text1); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
   .wrap { width: 100%; max-width: 400px; padding: 24px; }
   .logo-row { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 32px; }
-  .logo-img { width: 40px; height: 40px; object-fit: contain; }
   .logo { font-size: 24px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
   .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
   h2 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 6px; }
@@ -32,9 +31,6 @@
   input::placeholder { color: var(--text3); }
   .btn { width: 100%; padding: 12px; background: var(--moz); color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; transition: background 0.15s; }
   .btn:hover { background: var(--moz-dark); }
-  .btn:disabled { background: var(--border2); cursor: not-allowed; }
-  .spin { display: none; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: sp .7s linear infinite; }
-  @keyframes sp { to { transform: rotate(360deg); } }
   .err { background: rgba(197,15,31,0.1); border: 1px solid rgba(197,15,31,0.3); color: #e74c3c; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 14px; display: none; }
   .footer { text-align: center; margin-top: 24px; font-size: 12px; color: var(--text3); }
 </style>
@@ -42,75 +38,36 @@
 <body>
 <div class="wrap">
   <div class="logo-row">
-    <img src="data:image/png;base64,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" alt="Mozok" class="logo-img">
     <span class="logo">mozok</span>
   </div>
   <div class="card">
     <h2>Sign in</h2>
     <p class="sub">Mozok Outlook Agent</p>
-    <label>Email</label>
-    <input type="email" id="email" placeholder="you@mozok.co" autocomplete="email">
     <label>Password</label>
-    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()">
-    <button class="btn" id="loginBtn" onclick="login()">
-      <span class="spin" id="sp"></span>
-      Sign In
-    </button>
+    <input type="password" id="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn" onclick="login()">Sign In</button>
     <div class="err" id="err"></div>
   </div>
   <div class="footer">mozok.co &nbsp;·&nbsp; Social media. Handled.</div>
 </div>
 <script>
-const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
-const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
-
 (function() {
-  const s = localStorage.getItem('mozok_session');
-  if (s) {
-    try {
-      const p = JSON.parse(s);
-      if (p.access_token && (!p.expires_at || Date.now()/1000 < p.expires_at)) {
-        window.location.href = '/';
-        return;
-      }
-    } catch(e) {}
-    localStorage.removeItem('mozok_session');
+  if (sessionStorage.getItem('mozok_auth') === 'true') {
+    window.location.href = '/';
   }
 })();
 
-async function login() {
-  const email = document.getElementById('email').value.trim();
+function login() {
   const password = document.getElementById('password').value;
   const err = document.getElementById('err');
-  const btn = document.getElementById('loginBtn');
-  const sp = document.getElementById('sp');
   err.style.display = 'none';
-  if (!email || !password) { err.textContent = 'Please enter your email and password.'; err.style.display = 'block'; return; }
-  btn.disabled = true; sp.style.display = 'inline-block';
-  try {
-    const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': ANON_KEY },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    if (data.access_token) {
-      localStorage.setItem('mozok_session', JSON.stringify({
-        access_token: data.access_token,
-        refresh_token: data.refresh_token,
-        expires_at: Math.floor(Date.now()/1000) + (data.expires_in || 3600),
-        user: data.user
-      }));
-      window.location.href = '/';
-    } else {
-      err.textContent = data.error_description || data.msg || 'Invalid email or password.';
-      err.style.display = 'block';
-    }
-  } catch(e) {
-    err.textContent = 'Connection error. Please try again.';
+  if (password === 'mozok2024') {
+    sessionStorage.setItem('mozok_auth', 'true');
+    window.location.href = '/';
+  } else {
+    err.textContent = 'Invalid password. Please try again.';
     err.style.display = 'block';
   }
-  btn.disabled = false; sp.style.display = 'none';
 }
 </script>
 </body>
