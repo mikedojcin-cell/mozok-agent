@@ -1,3 +1,17 @@
+<script>
+(function(){
+var t=localStorage.getItem('mozok_token');
+if(!t){window.location.href='/login.html';return;}
+var _f=window.fetch;
+window.fetch=function(u,o){
+o=o||{};
+if(typeof u==='string'&&u.startsWith('/api/')){
+o.headers=Object.assign({},o.headers,{'Authorization':'Bearer '+t});
+}
+return _f(u,o);
+};
+})();
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
