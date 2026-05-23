@@ -42,7 +42,7 @@ input:focus{border-color:#1D9E75}
 <script>
 var SB='https://kwyycykglqrokqsbuiny.supabase.co';
 var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
-(function(){if(localStorage.getItem('mozok_token'))window.location.href='/';})();
+(function(){if(localStorage.getItem('mozok_token')){var rp=new URLSearchParams(window.location.search).get('redirect');window.location.href=rp||'/';}})();
 async function go(){
 var e=document.getElementById('em').value.trim();
 var p=document.getElementById('pw').value;
@@ -54,7 +54,7 @@ btn.disabled=true;btn.textContent='Signing in...';
 try{
 var r=await fetch(SB+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'Content-Type':'application/json','apikey':AK},body:JSON.stringify({email:e,password:p})});
 var d=await r.json();
-if(d.access_token){localStorage.setItem('mozok_token',d.access_token);localStorage.setItem('mozok_refresh',d.refresh_token||'');window.location.href='/';}
+if(d.access_token){localStorage.setItem('mozok_token',d.access_token);localStorage.setItem('mozok_refresh',d.refresh_token||'');var rp=new URLSearchParams(window.location.search).get('redirect');window.location.href=rp||'/';}
 else{err.textContent=d.error_description||d.msg||'Invalid email or password.';err.style.display='block';btn.disabled=false;btn.textContent='Sign In';}
 }catch(x){err.textContent='Network error.';err.style.display='block';btn.disabled=false;btn.textContent='Sign In';}
 }
