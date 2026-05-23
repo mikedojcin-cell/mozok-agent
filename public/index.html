@@ -1,15 +1,10 @@
 <script>
 (function(){
 var t=localStorage.getItem('mozok_token');
-if(!t){window.location.href='/login.html';return;}
+function exp(tok){try{var p=JSON.parse(atob(tok.split('.')[1]));return p.exp<Math.floor(Date.now()/1000);}catch(e){return true;}}
+if(!t||exp(t)){localStorage.removeItem('mozok_token');window.location.href='/login.html';return;}
 var _f=window.fetch;
-window.fetch=function(u,o){
-o=o||{};
-if(typeof u==='string'&&u.startsWith('/api/')){
-o.headers=Object.assign({},o.headers,{'Authorization':'Bearer '+t});
-}
-return _f(u,o);
-};
+window.fetch=function(u,o){o=o||{};if(typeof u==='string'&&u.startsWith('/api/')){o.headers=Object.assign({},o.headers,{'Authorization':'Bearer '+t});}return _f(u,o);};
 })();
 </script>
 <!DOCTYPE html>
