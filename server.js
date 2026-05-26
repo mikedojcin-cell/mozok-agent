@@ -189,29 +189,23 @@ app.get('/visit/:contactId', async (req, res) => {
 
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
+
+const BOT_UA_PATTERNS = ['YahooMailProxy','Synapse','y!j-asr','msnbot','bingbot','MS Exchange','Microsoft Office','curl','python-requests','okhttp','Go-http-client','GoogleImageProxy','Googlebot','Google-Read-Aloud','Cloudflare','Barracuda','Proofpoint','Mimecast','IronPort','SpamAssassin','Symantec','Trend Micro','Wget','libwww','Jakarta','Java/','Apache-HttpClient'];
+function isBotUA(ua){if(!ua||ua.trim()==='')return true;const l=ua.toLowerCase();return BOT_UA_PATTERNS.some(p=>l.includes(p.toLowerCase()));}
 app.get('/track/open/:contactId', async (req, res) => {
   const { contactId } = req.params;
+  const ua = req.headers['user-agent'] || '';
+  const isBot = isBotUA(ua);
   try {
-    await supabase('POST', '/rest/v1/email_events', {
-      contact_id: contactId,
-      event_type: 'open',
-      metadata: req.headers['user-agent'] || ''
-    });
-    const contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=open_count`);
-    const currentCount = contacts[0]?.open_count || 0;
-    await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
-      open_count: currentCount + 1,
-      last_opened_at: new Date().toISOString()
-    });
-  } catch(e) {
-    console.error('Track open error:', e.message);
-  }
-  res.writeHead(200, {
-    'Content-Type': 'image/gif',
-    'Content-Length': PIXEL.length,
-    'Cache-Control': 'no-store, no-cache, must-revalidate, private',
-    'Pragma': 'no-cache'
-  });
+    await supabase('POST', '/rest/v1/email_events', { contact_id: contactId, event_type: isBot ? 'bot_open' : 'open', metadata: ua });
+    if (!isBot) {
+      const contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=open_count`);
+      const currentCount = contacts[0]?.open_count || 0;
+      await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, { open_count: currentCount + 1, last_opened_at: new Date().toISOString() });
+    }
+  } catch(e) { console.error('Track open error:', e.message); }
+  const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
+  res.writeHead(200, { 'Content-Type': 'image/gif', 'Content-Length': PIXEL.length, 'Cache-Control': 'no-store, no-cache, must-revalidate, private', 'Pragma': 'no-cache' });
   res.end(PIXEL);
 });
 
@@ -219,39 +213,32 @@ app.get('/track/open/:contactId', async (req, res) => {
 
 app.get('/api/pipeline', async (req, res) => {
   try {
-    const [contacts] = await Promise.all([
-      supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at'),
-      supabase('GET', '/rest/v1/email_events?order=created_at.desc&limit=200')
-    ]);
-
+    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at,batch_id');
     const now = Date.now();
-    const pipeline = {
-      ready: [], email1_sent: [], email2_due: [], email2_sent: [],
-      email3_due: [], email3_sent: [], clicked: [], opened: []
-    };
-
+    const pipeline = { ready:[], email1_sent:[], email2_due:[], email2_sent:[], email3_due:[], email3_sent:[], clicked:[], bounced:[] };
     for (const c of contacts) {
-      const hasClicked = (c.click_count || 0) > 0;
-      const hasOpened = c.open_count > 0;
-      const e1sent = c.email1_sent_at ? new Date(c.email1_sent_at) : null;
-      const e2sent = c.email2_sent_at ? new Date(c.email2_sent_at) : null;
-      const e1days = e1sent ? (now - e1sent) / 86400000 : null;
-      const e2days = e2sent ? (now - e2sent) / 86400000 : null;
-
-      if (hasClicked) pipeline.clicked.push(c);
-      else if (hasOpened) pipeline.opened.push(c);
-      else if (c.status === 'EMAIL_3_SENT') pipeline.email3_sent.push(c);
-      else if (c.status === 'EMAIL_2_SENT' && e2days >= 5) pipeline.email3_due.push(c);
-      else if (c.status === 'EMAIL_2_SENT') pipeline.email2_sent.push(c);
-      else if (c.status === 'EMAIL_1_SENT' && e1days >= 5) pipeline.email2_due.push(c);
-      else if (c.status === 'EMAIL_1_SENT') pipeline.email1_sent.push(c);
+      const hasClicked=(c.click_count||0)>0;
+      const e1sent=c.email1_sent_at?new Date(c.email1_sent_at):null;
+      const e2sent=c.email2_sent_at?new Date(c.email2_sent_at):null;
+      const e1days=e1sent?(now-e1sent)/86400000:null;
+      const e2days=e2sent?(now-e2sent)/86400000:null;
+      c.human_opened=(c.open_count||0)>0;
+      if(c.status==='BOUNCED')pipeline.bounced.push(c);
+      else if(hasClicked)pipeline.clicked.push(c);
+      else if(c.status==='EMAIL_3_SENT')pipeline.email3_sent.push(c);
+      else if(c.status==='EMAIL_2_SENT'&&e2days>=5)pipeline.email3_due.push(c);
+      else if(c.status==='EMAIL_2_SENT')pipeline.email2_sent.push(c);
+      else if(c.status==='EMAIL_1_SENT'&&e1days>=5)pipeline.email2_due.push(c);
+      else if(c.status==='EMAIL_1_SENT')pipeline.email1_sent.push(c);
       else pipeline.ready.push(c);
     }
-
-    res.json({ pipeline, total: contacts.length });
-  } catch(e) {
-    res.json({ error: e.message });
-  }
+    const batchMap={};
+    for(const c of contacts){if(!c.batch_id)continue;if(!batchMap[c.batch_id])batchMap[c.batch_id]={batch_id:c.batch_id,count:0,date:c.batch_id.split('_')[0]};batchMap[c.batch_id].count++;}
+    const batch_stats=Object.values(batchMap).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,14);
+    const todayStr=new Date().toISOString().slice(0,10);
+    const sent_today=contacts.filter(c=>(c.email1_sent_at||'').startsWith(todayStr)||(c.email2_sent_at||'').startsWith(todayStr)||(c.email3_sent_at||'').startsWith(todayStr)).length;
+    res.json({ pipeline, total:contacts.length, batch_stats, sent_today });
+  } catch(e){res.json({error:e.message});}
 });
 
 // ─── GRAPH / SUPABASE API (protected) ────────────────────────────────────────
@@ -323,7 +310,7 @@ app.post('/api/graph', async (req, res) => {
         saveToSentItems: true
       };
       const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
-      if (r.status === 202) return res.json({ success: true, status: 202 });
+      if(r.status===202){const batchDate=new Date().toISOString().slice(0,10);const batchId=req.body.batch_id||batchDate+'_1';const emailNum=req.body.emailNum||1;if(contactId){await supabase('PATCH',`/rest/v1/contacts?id=eq.${contactId}`,{[`email${emailNum}_sent_at`]:new Date().toISOString(),status:`EMAIL_${emailNum}_SENT`,batch_id:batchId}).catch(e=>console.error('Batch stamp:',e.message));}return res.json({success:true,status:202,batch_id:batchId});}
       return res.json({ error: (r.data?.error?.code ? '[' + r.data.error.code + '] ' : '') + (r.data?.error?.message || `Send failed (${r.status})`) });
     } catch(e) { return res.json({ error: e.message }); }
   }
@@ -519,4 +506,32 @@ app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'publ
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
+// BOUNCE CHECK
+app.post('/api/bounce-check', requireAuth, async (req, res) => {
+  const { tenantId, clientId, clientSecret, userEmail } = req.body;
+  if(!tenantId||!clientId||!clientSecret||!userEmail)return res.json({error:'Missing credentials'});
+  try {
+    const tokenRes=await getToken(tenantId,clientId,clientSecret);
+    if(!tokenRes.access_token)return res.json({error:'Token failed'});
+    const token=tokenRes.access_token;
+    const filter=encodeURIComponent("contains(subject,'Undeliverable') or contains(subject,'Delivery has failed') or contains(subject,'Mail Delivery Subsystem')");
+    const ndrRes=await graphCall(token,'GET',`/v1.0/users/${userEmail}/messages?$filter=${filter}&$top=50&$select=subject,bodyPreview`,null);
+    if(!ndrRes?.data?.value)return res.json({bounced:[],checked:0});
+    const bouncedEmails=[];
+    for(const msg of ndrRes.data.value){const m=((msg.subject||'')+(msg.bodyPreview||'')).match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g)||[];m.forEach(e=>{if(!e.includes('postmaster')&&!e.includes('mailer-daemon')&&e.toLowerCase()!==userEmail.toLowerCase())bouncedEmails.push(e.toLowerCase());});}
+    const unique=[...new Set(bouncedEmails)];
+    let marked=0;
+    for(const email of unique){const ex=await supabase('GET',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}&select=id,status`);if(ex.length>0&&ex[0].status!=='BOUNCED'){await supabase('PATCH',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}`,{status:'BOUNCED',bounced_at:new Date().toISOString()});marked++;}}
+    res.json({bounced:unique,checked:ndrRes.data.value.length,marked});
+  }catch(e){res.json({error:e.message});}
+});
+// CAMPAIGN SETTINGS
+app.get('/api/campaign-settings', requireAuth, async (req, res) => {
+  try{const rows=await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=*');res.json(rows[0]||{});}catch(e){res.json({error:e.message});}
+});
+app.post('/api/campaign-settings', requireAuth, async (req, res) => {
+  const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
+  try{await supabase('POST','/rest/v1/campaign_settings',{id:1,target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()},{'Prefer':'resolution=merge-duplicates'});res.json({success:true});}catch(e){res.json({error:e.message});}
+});
+
 app.listen(PORT, () => console.log(`Mozok Agent running on port ${PORT}`));
