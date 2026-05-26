@@ -276,7 +276,7 @@ app.post('/api/graph', async (req, res) => {
     const { to, subject, body: emailBody, contactId } = req.body;
     try {
       const tokenRes = await getToken(tenantId, clientId, clientSecret);
-      if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
+      if (!tokenRes.access_token) return res.json({ error: '[' + (tokenRes.error||'token_error') + '] ' + (tokenRes.error_description || 'Token failed') });
       const token = tokenRes.access_token;
 
       const trackingPixel = contactId
@@ -301,13 +301,13 @@ app.post('/api/graph', async (req, res) => {
       };
       const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
       if (r.status === 202) return res.json({ success: true, status: 202 });
-      return res.json({ error: r.data?.error?.message || `Send failed (${r.status})` });
+      return res.json({ error: (r.data?.error?.code ? '[' + r.data.error.code + '] ' : '') + (r.data?.error?.message || `Send failed (${r.status})`) });
     } catch(e) { return res.json({ error: e.message }); }
   }
 
   try {
     const tokenRes = await getToken(tenantId, clientId, clientSecret);
-    if (!tokenRes.access_token) return res.json({ error: tokenRes.error_description || 'Token failed' });
+    if (!tokenRes.access_token) return res.json({ error: '[' + (tokenRes.error||'token_error') + '] ' + (tokenRes.error_description || 'Token failed') });
     const token = tokenRes.access_token;
 
     if (action === 'test') {
