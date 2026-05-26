@@ -1,10 +1,35 @@
 <script>
 (function(){
+var SB='https://kwyycykglqrokqsbuiny.supabase.co';
+var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
 var t=localStorage.getItem('mozok_token');
-function exp(tok){try{var p=JSON.parse(atob(tok.split('.')[1]));return p.exp<Math.floor(Date.now()/1000);}catch(e){return true;}}
-if(!t||exp(t)){localStorage.removeItem('mozok_token');window.location.href='/login.html';return;}
 var _f=window.fetch;
-window.fetch=function(u,o){o=o||{};if(typeof u=='string'&&u.includes('/api/')){o.headers=Object.assign({},o.headers,{'Authorization':'Bearer '+t});}return _f(u,o);};
+function exp(tok){try{var p=JSON.parse(atob(tok.split('.')[1]));return p.exp<Math.floor(Date.now()/1000);}catch(e){return true;}}
+async function refresh(){
+  var r=localStorage.getItem('mozok_refresh');if(!r)return null;
+  try{
+    var res=await _f(SB+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json','apikey':AK},body:JSON.stringify({refresh_token:r})});
+    var d=await res.json();
+    if(d.access_token){localStorage.setItem('mozok_token',d.access_token);localStorage.setItem('mozok_refresh',d.refresh_token||r);t=d.access_token;return d.access_token;}
+  }catch(e){}
+  return null;
+}
+window.fetch=function(u,o){
+  o=o||{};
+  if(typeof u==='string'&&u.includes('/api/')){o.headers=Object.assign({},o.headers,{'Authorization':'Bearer '+t});}
+  return _f(u,o).then(function(res){
+    if(res.status===401&&typeof u==='string'&&u.includes('/api/')){
+      return refresh().then(function(nt){
+        if(nt){var o2={method:o.method,headers:Object.assign({},o.headers,{'Authorization':'Bearer '+nt}),body:o.body};return _f(u,o2);}
+        localStorage.removeItem('mozok_token');window.location.href='/login.html';return res;
+      });
+    }
+    return res;
+  });
+};
+(async function(){
+  if(!t||exp(t)){var nt=await refresh();if(!nt){localStorage.removeItem('mozok_token');window.location.href='/login.html';}}
+})();
 })();
 </script>
 <!DOCTYPE html>
