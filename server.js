@@ -162,6 +162,29 @@ app.get('/track/click/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
+// ─── CLEAN VISIT REDIRECT (public) ───────────────────────────────────────────
+
+app.get('/visit/:contactId', async (req, res) => {
+  const { contactId } = req.params;
+  const redirectUrl = 'https://mozok.co';
+  try {
+    await supabase('POST', '/rest/v1/email_events', {
+      contact_id: contactId,
+      event_type: 'click',
+      metadata: redirectUrl
+    });
+    const contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=click_count`);
+    const currentCount = contacts[0]?.click_count || 0;
+    await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
+      click_count: currentCount + 1,
+      last_clicked_at: new Date().toISOString()
+    });
+  } catch(e) {
+    console.error('Visit track error:', e.message);
+  }
+  res.redirect(redirectUrl);
+});
+
 // ─── EMAIL OPEN TRACKING (public) ────────────────────────────────────────────
 
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
@@ -286,7 +309,7 @@ app.post('/api/graph', async (req, res) => {
       const htmlBody = emailBody
         .replace(/\n/g, '<br>')
         .replace(
-          /(https:\/\/app\.mozok\.co\/track\/click\/[^\s<|]+)/g,
+          /(https:\/\/app\.mozok\.co\/visit\/[^\s<]+)/g,
           '<a href="$1" style="color:#1D9E75;">mozok.co</a>'
         ) + trackingPixel;
 
