@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<!--
+  MOZOK PIPELINE UPGRADE
+  ──────────────────────
+  This file is a SELF-CONTAINED replacement for the pipeline section of index.html.
+  It includes:
+    • Daily send progress bar (X / 100 goal)
+    • Batch history (per-session sent counts)
+    • Bot vs human open indicators
+    • Bounce badges
+    • Campaign Settings panel (Apollo search params, configurable without touching code)
+    • Check-bounces button
+
+  HOW TO USE:
+  Option A (standalone) — open this file directly at /pipeline-upgrade.html on your server.
+  Option B (merge)      — copy the <style> block into index.html's <style>,
+                          copy the <body> HTML into your pipeline tab section,
+                          copy the <script> block into your existing JS.
+
+  The page reads from the same API endpoints as index.html.
+  Auth: it reads mozok_token from localStorage (same as index.html).
+  Set BASE_URL below if your server is not app.mozok.co.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mozok — Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --moz:#1D9E75;--moz-light:#E1F5EE;--moz-dark:#085041;
+  --bg:#f9f9f8;--surface:#fff;--border:rgba(0,0,0,.1);--border-strong:rgba(0,0,0,.2);
+  --text:#1a1a18;--text-2:#5f5e5a;--text-3:#888780;
+  --red:#d63031;--red-light:#fdf0f0;
+  --amber:#e17055;--amber-light:#fef3ee;
+  --radius:10px;--radius-lg:14px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.app{max-width:1200px;margin:0 auto;padding:0 1.5rem 3rem}
+
+/* HEADER */
+.header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0;border-bottom:.5px solid var(--border);margin-bottom:1.5rem}
+.logo{font-size:20px;font-weight:600;color:var(--moz);letter-spacing:-.5px}
+.logo span{color:var(--text-3);font-weight:400;font-size:13px;margin-left:8px}
+.hdr-right{display:flex;align-items:center;gap:10px}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-family:inherit;padding:7px 14px;border-radius:var(--radius);cursor:pointer;border:none;transition:all .15s}
+.btn-primary{background:var(--moz);color:#fff}
+.btn-primary:hover{background:var(--moz-dark)}
+.btn-ghost{background:none;border:.5px solid var(--border-strong);color:var(--text-2)}
+.btn-ghost:hover{background:var(--bg)}
+.btn-sm{font-size:12px;padding:5px 11px}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{opacity:.88}
+
+/* TOP STATS BAR */
+.top-stats{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;gap:12px;margin-bottom:1.5rem}
+.stat-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem}
+.stat-label{font-size:11px;color:var(--text-3);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.stat-val{font-size:22px;font-weight:600;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text-3);margin-top:2px}
+
+/* SEND PROGRESS */
+.send-progress-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius);padding:.875rem 1rem}
+.prog-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.prog-title{font-size:11px;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;font-weight:600}
+.prog-count{font-size:20px;font-weight:600;color:var(--text)}
+.prog-count span{font-size:13px;font-weight:400;color:var(--text-3)}
+.prog-track{height:8px;background:#eee;border-radius:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:4px;background:var(--moz);transition:width .4s ease}
+.prog-fill.danger{background:var(--red)}
+.prog-fill.warn{background:var(--amber)}
+
+/* TABS */
+.tabs{display:flex;gap:4px;border-bottom:.5px solid var(--border);margin-bottom:1.5rem}
+.tab{background:none;border:none;cursor:pointer;padding:9px 16px;font-size:13px;font-family:inherit;color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-.5px;transition:color .15s}
+.tab.active{color:var(--moz);border-bottom-color:var(--moz);font-weight:500}
+.tab:hover:not(.active){color:var(--text-2)}
+
+/* VIEWS */
+.view{display:none}.view.active{display:block}
+
+/* PIPELINE COLUMNS */
+.pipeline-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.pipe-col{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.pipe-head{padding:.75rem .875rem;border-bottom:.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.pipe-title{font-size:12px;font-weight:600;color:var(--text-2);text-transform:uppercase;letter-spacing:.04em}
+.pipe-count{font-size:12px;font-weight:600;color:var(--moz);background:var(--moz-light);padding:1px 8px;border-radius:10px}
+.pipe-count.zero{color:var(--text-3);background:#f0f0ef}
+.pipe-count.red{color:var(--red);background:var(--red-light)}
+.pipe-items{padding:.5rem;display:flex;flex-direction:column;gap:6px;min-height:60px;max-height:520px;overflow-y:auto}
+
+/* CONTACT CARD */
+.c-card{background:var(--bg);border:.5px solid var(--border);border-radius:8px;padding:.625rem .75rem;cursor:pointer;transition:border-color .12s}
+.c-card:hover{border-color:var(--border-strong)}
+.c-name{font-size:13px;font-weight:500;color:var(--text);line-height:1.3;margin-bottom:2px}
+.c-company{font-size:11px;color:var(--text-3);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.c-badges{display:flex;gap:4px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 6px;border-radius:8px;font-weight:500}
+.b-open{background:#e1f5ee;color:#085041}       /* human opened */
+.b-click{background:#e6f1fb;color:#0c447c}      /* clicked */
+.b-bounce{background:var(--red-light);color:var(--red)} /* bounced */
+.b-due{background:#faeeda;color:#633806}         /* follow-up due */
+.b-batch{background:#f1efe8;color:#444441}       /* batch label */
+
+/* EMPTY STATE */
+.empty-col{text-align:center;padding:1.5rem .5rem;color:var(--text-3);font-size:12px}
+
+/* BATCH TABLE */
+.section-title{font-size:14px;font-weight:500;color:var(--text);margin-bottom:12px;margin-top:1.5rem}
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th{font-size:11px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;padding:0 10px 10px 0;text-align:left;border-bottom:.5px solid var(--border)}
+.tbl td{padding:9px 10px 9px 0;border-bottom:.5px solid var(--border);color:var(--text);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.bar-cell{display:flex;align-items:center;gap:8px}
+.mini-bar{flex:1;height:5px;background:#eee;border-radius:3px;overflow:hidden}
+.mini-fill{height:100%;border-radius:3px;background:var(--moz)}
+
+/* CAMPAIGN SETTINGS */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem}
+.field{margin-bottom:10px}
+.field label{font-size:12px;color:var(--text-3);display:block;margin-bottom:4px;font-weight:500}
+.field input,.field select,.field textarea{
+  font-size:13px;font-family:inherit;padding:8px 11px;border-radius:var(--radius);
+  border:.5px solid var(--border-strong);background:var(--surface);color:var(--text);
+  outline:none;width:100%;transition:border-color .12s
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--moz)}
+.field textarea{resize:vertical;min-height:70px}
+.settings-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem}
+.settings-card .card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:1rem;padding-bottom:.75rem;border-bottom:.5px solid var(--border)}
+.help-text{font-size:11px;color:var(--text-3);margin-top:3px}
+.save-banner{background:var(--moz-light);color:var(--moz-dark);border-radius:var(--radius);padding:10px 14px;font-size:13px;display:none;margin-top:12px}
+
+/* CONN BADGE */
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#ccc;display:inline-block}
+.conn-dot.live{background:var(--moz)}
+.conn-label{font-size:12px;color:var(--text-3)}
+
+/* MODAL */
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:200}
+.modal{background:var(--surface);border-radius:var(--radius-lg);padding:1.75rem;width:460px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.14)}
+.modal h3{font-size:16px;font-weight:600;margin-bottom:1.25rem}
+.modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">mozok <span>pipeline</span></div>
+    <div class="hdr-right">
+      <span class="conn-dot" id="conn-dot"></span>
+      <span class="conn-label" id="conn-text">connecting...</span>
+      <button class="btn btn-ghost btn-sm" onclick="checkBounces()">🔍 Check bounces</button>
+      <button class="btn btn-primary btn-sm" onclick="loadAll()">↻ Refresh</button>
+    </div>
+  </div>
+
+  <!-- TOP STATS -->
+  <div class="top-stats">
+    <!-- Daily progress (wide card) -->
+    <div class="send-progress-card">
+      <div class="prog-header">
+        <div class="prog-title">Sent today</div>
+        <div class="prog-count" id="sent-today">0 <span>/ <span id="daily-goal">100</span></span></div>
+      </div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="stat-sub" style="margin-top:6px" id="prog-label">0 of 100 daily goal</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Ready to send</div>
+      <div class="stat-val" id="st-ready">—</div>
+      <div class="stat-sub">first touch</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Follow-ups due</div>
+      <div class="stat-val" id="st-due">—</div>
+      <div class="stat-sub">email 2 + 3</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Clicked links</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Clicked links</div>
+      <div class="stat-val" id="st-clicked">—</div>
+      <div class="stat-sub">high intent</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Bounced</div>
+      <div class="stat-val" id="st-bounced" style="color:var(--red)">—</div>
+      <div class="stat-sub">undeliverable</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('pipeline',this)">Pipeline</button>
+    <button class="tab" onclick="showTab('batches',this)">Batch history</button>
+    <button class="tab" onclick="showTab('settings',this)">⚙ Campaign settings</button>
+  </div>
+
+  <!-- ── PIPELINE VIEW ──────────────────────────────────────────────────── -->
+  <div id="view-pipeline" class="view active">
+    <div class="pipeline-grid" id="pipeline-grid">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+  <!-- ── BATCH HISTORY VIEW ────────────────────────────────────────────── -->
+  <div id="view-batches" class="view">
+    <div class="section-title">Email batches sent (last 14)</div>
+    <table class="tbl">
+      <thead><tr>
+        <th>Batch date</th>
+        <th>Contacts reached</th>
+        <th>Volume</th>
+        <th>Human opens</th>
+        <th>Clicks</th>
+      </tr></thead>
+      <tbody id="batch-tbody"><tr><td colspan="5" style="color:var(--text-3);padding:1rem 0;font-size:13px">Loading...</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- ── CAMPAIGN SETTINGS VIEW ───────────────────────────────────────── -->
+  <div id="view-settings" class="view">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <div style="font-size:14px;font-weight:500">Campaign settings</div>
+      <button class="btn btn-primary" onclick="saveSettings()">Save settings</button>
+    </div>
+
+    <div class="settings-grid">
+
+      <!-- LEFT: APOLLO SEARCH PARAMS -->
+      <div class="settings-card">
+        <div class="card-title">🔍 Apollo prospect search</div>
+        <p style="font-size:12px;color:var(--text-3);margin-bottom:1rem;line-height:1.6">
+          These filters are used when pulling prospects from Apollo.
+          Change them here — no code changes needed.
+        </p>
+
+        <div class="field">
+          <label>Target location</label>
+          <input id="s-location" placeholder="e.g. Toronto, Canada" />
+          <div class="help-text">City, region, or country. Separate multiple with commas.</div>
+        </div>
+
+        <div class="field">
+          <label>Industry</label>
+          <input id="s-industry" placeholder="e.g. Real Estate, Mortgage, Finance" />
+          <div class="help-text">Industry keywords to target.</div>
+        </div>
+
+        <div class="field">
+          <label>Job titles (one per line)</label>
+          <textarea id="s-titles" placeholder="CEO&#10;Owner&#10;Founder&#10;Managing Director"></textarea>
+          <div class="help-text">Decision-maker titles to prospect.</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="field">
+            <label>Company size — min employees</label>
+            <input id="s-size-min" type="number" placeholder="1" />
+          </div>
+          <div class="field">
+            <label>Company size — max employees</label>
+            <input id="s-size-max" type="number" placeholder="200" />
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: SEND SETTINGS + EMAIL SUBJECTS -->
+      <div>
+        <div class="settings-card" style="margin-bottom:1.25rem">
+          <div class="card-title">📬 Send settings</div>
+
+          <div class="field">
+            <label>Daily send goal</label>
+            <input id="s-goal" type="number" placeholder="100" />
+            <div class="help-text">Target number of emails per day. Shows in the progress bar.</div>
+          </div>
+        </div>
+
+        <div class="settings-card">
+          <div class="card-title">✉ Default email subjects</div>
+          <p style="font-size:12px;color:var(--text-3);margin-bottom:1rem;line-height:1.6">
+            Pre-fill the subject line for each email in the sequence.
+          </p>
+
+          <div class="field">
+            <label>Email 1 subject</label>
+            <input id="s-sub1" placeholder="Quick question about [Company]" />
+          </div>
+          <div class="field">
+            <label>Email 2 subject (follow-up)</label>
+            <input id="s-sub2" placeholder="Following up — [Company]" />
+          </div>
+          <div class="field">
+            <label>Email 3 subject (final)</label>
+            <input id="s-sub3" placeholder="Last note — [Company]" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="save-banner" id="save-banner">✓ Settings saved successfully.</div>
+
+    <!-- APOLLO PULL INSTRUCTIONS -->
+    <div style="background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-top:.5rem">
+      <div style="font-size:14px;font-weight:600;margin-bottom:.75rem">How to run an Apollo pull</div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.7">
+        Once your settings are saved above, tell Claude in Cowork:<br>
+        <code style="background:var(--bg);padding:2px 8px;border-radius:6px;font-size:12px;display:inline-block;margin-top:4px">
+          "Run an Apollo pull using the current campaign settings"
+        </code><br><br>
+        Claude will read your saved location, industry, job titles and company size filters,
+        search Apollo, and import the results directly into your pipeline — no manual setup.
+      </p>
+      <div id="current-settings-display" style="margin-top:1rem;font-size:12px;color:var(--text-3);line-height:1.8"></div>
+    </div>
+  </div>
+
+</div><!-- /.app -->
+
+<!-- CONTACT MODAL -->
+<div class="modal-backdrop" id="modal" style="display:none" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h3 id="modal-title">Contact</h3>
+    <div id="modal-body"></div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────────
+const BASE_URL = 'https://app.mozok.co'; // change if your server URL differs
+const token = localStorage.getItem('mozok_token') || '';
+
+// ─── AUTH FETCH ───────────────────────────────────────────────────────────────
+async function apiFetch(path, opts = {}) {
+  const res = await fetch(BASE_URL + path, {
+    ...opts,
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+  return res.json().catch(() => ({}));
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let pipelineData = null;
+let settingsData = {};
+let graphCreds = JSON.parse(localStorage.getItem('mozok_creds') || '{}');
+
+// ─── PIPELINE COLUMN DEFINITIONS ─────────────────────────────────────────────
+const COLS = [
+  { key: 'ready',       label: 'Ready',         color: '#1D9E75', desc: 'Not yet contacted' },
+  { key: 'email1_sent', label: 'Email 1 sent',  color: '#0C447C', desc: 'Waiting 5 days' },
+  { key: 'email2_due',  label: '⚡ Email 2 due', color: '#633806', desc: 'Follow-up needed!' },
+  { key: 'email2_sent', label: 'Email 2 sent',  color: '#3C3489', desc: 'Waiting 5 days' },
+  { key: 'email3_due',  label: '⚡ Email 3 due', color: '#633806', desc: 'Final touch needed!' },
+];
+const COLS_RIGHT = [
+  { key: 'email3_sent', label: 'Sequence done', color: '#444441', desc: 'All 3 sent' },
+  { key: 'clicked',     label: '🔥 Clicked',    color: '#0C447C', desc: 'High intent' },
+  { key: 'bounced',     label: '⛔ Bounced',    color: '#d63031', desc: 'Undeliverable' },
+];
+const ALL_COLS = [...COLS, ...COLS_RIGHT];
+
+// ─── LOAD ALL DATA ────────────────────────────────────────────────────────────
+async function loadAll() {
+  document.getElementById('conn-dot').className = 'conn-dot';
+  document.getElementById('conn-text').textContent = 'connecting...';
+
+  const [pipe, settings] = await Promise.all([
+    apiFetch('/api/pipeline'),
+    apiFetch('/api/campaign-settings')
+  ]);
+
+  if (pipe.error) {
+    document.getElementById('conn-text').textContent = 'error: ' + pipe.error;
+    return;
+  }
+
+  document.getElementById('conn-dot').className = 'conn-dot live';
+  document.getElementById('conn-text').textContent = 'live';
+
+  pipelineData = pipe;
+  settingsData = settings;
+
+  renderStats(pipe, settings);
+  renderPipeline(pipe);
+  renderBatches(pipe.batch_stats || []);
+  populateSettingsForm(settings);
+}
+
+// ─── STATS BAR ────────────────────────────────────────────────────────────────
+function renderStats(pipe, settings) {
+  const pl = pipe.pipeline || {};
+  const goal = settings.daily_send_goal || 100;
+  const sent = pipe.sent_today || 0;
+  const pct = Math.min(100, Math.round(sent / goal * 100));
+
+  document.getElementById('sent-today').innerHTML = `${sent} <span>/ <span id="daily-goal">${goal}</span></span>`;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-fill').className = 'prog-fill' + (pct >= 100 ? ' danger' : pct >= 70 ? '' : '');
+  document.getElementById('prog-label').textContent = `${sent} of ${goal} daily goal — ${pct}%`;
+
+  const due = (pl.email2_due?.length || 0) + (pl.email3_due?.length || 0);
+  document.getElementById('st-ready').textContent   = pl.ready?.length || 0;
+  document.getElementById('st-due').textContent     = due || 0;
+  document.getElementById('st-clicked').textContent = pl.clicked?.length || 0;
+  document.getElementById('st-bounced').textContent = pl.bounced?.length || 0;
+}
+
+// ─── PIPELINE GRID ────────────────────────────────────────────────────────────
+function renderPipeline(pipe) {
+  const pl = pipe.pipeline || {};
+  const grid = document.getElementById('pipeline-grid');
+  // 5-column layout: first 5 cols on row 1
+  grid.style.gridTemplateColumns = 'repeat(5,1fr)';
+
+  let html = '';
+  ALL_COLS.forEach(col => {
+    const items = pl[col.key] || [];
+    const isDue = col.key.includes('due');
+    const isBounce = col.key === 'bounced';
+    const countClass = items.length === 0 ? 'zero' : isBounce ? 'red' : '';
+
+    html += `<div class="pipe-col">
+      <div class="pipe-head">
+        <div class="pipe-title">${col.label}</div>
+        <div class="pipe-count ${countClass}">${items.length}</div>
+      </div>
+      <div class="pipe-items">`;
+
+    if (items.length === 0) {
+      html += `<div class="empty-col">Empty</div>`;
+    } else {
+      items.forEach(c => {
+        const name = [c.firstname, c.lastname].filter(Boolean).join(' ') || c.email;
+        const badges = [];
+        if (c.human_opened) badges.push(`<span class="badge b-open">👁 opened</span>`);
+        if ((c.click_count || 0) > 0) badges.push(`<span class="badge b-click">🔗 clicked</span>`);
+        if (c.status === 'BOUNCED') badges.push(`<span class="badge b-bounce">⛔ bounced</span>`);
+        if (isDue) badges.push(`<span class="badge b-due">⚡ due</span>`);
+        if (c.batch_id) badges.push(`<span class="badge b-batch">${c.batch_id.replace('_', ' · ')}</span>`);
+
+        html += `<div class="c-card" onclick="showContact(${JSON.stringify(c).replace(/"/g,'&quot;')})">
+          <div class="c-name">${escHtml(name)}</div>
+          <div class="c-company">${escHtml(c.company || '—')}</div>
+          ${badges.length ? `<div class="c-badges">${badges.join('')}</div>` : ''}
+        </div>`;
+      });
+    }
+
+    html += `</div></div>`;
+  });
+
+  grid.innerHTML = html;
+}
+
+// ─── BATCH HISTORY ────────────────────────────────────────────────────────────
+function renderBatches(batches) {
+  const tbody = document.getElementById('batch-tbody');
+  if (!batches.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-3);padding:1rem 0;font-size:13px">No batch data yet. Batch IDs are stamped from server-patches.js Patch 3.</td></tr>';
+    return;
+  }
+  const maxCount = Math.max(...batches.map(b => b.count), 1);
+  const pl = pipelineData?.pipeline || {};
+  const allContacts = Object.values(pl).flat();
+
+  tbody.innerHTML = batches.map(b => {
+    const pct = Math.round(b.count / maxCount * 100);
+    const bContacts = allContacts.filter(c => c.batch_id === b.batch_id);
+    const opens = bContacts.filter(c => c.human_opened).length;
+    const clicks = bContacts.filter(c => (c.click_count || 0) > 0).length;
+    return `<tr>
+      <td>${b.date}</td>
+      <td>${b.count}</td>
+      <td>
+        <div class="bar-cell">
+          <div class="mini-bar"><div class="mini-fill" style="width:${pct}%"></div></div>
+          <span style="font-size:12px;color:var(--text-3)">${b.count}</span>
+        </div>
+      </td>
+      <td>${opens > 0 ? `<span style="color:var(--moz);font-weight:500">${opens}</span>` : `<span style="color:var(--text-3)">0</span>`}</td>
+      <td>${clicks > 0 ? `<span style="color:#0C447C;font-weight:500">${clicks}</span>` : `<span style="color:var(--text-3)">0</span>`}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── SETTINGS FORM ────────────────────────────────────────────────────────────
+function populateSettingsForm(s) {
+  document.getElementById('s-location').value  = s.target_location || '';
+  document.getElementById('s-industry').value  = s.industry || '';
+  document.getElementById('s-titles').value    = (s.job_titles || []).join('\n');
+  document.getElementById('s-size-min').value  = s.company_size_min || '';
+  document.getElementById('s-size-max').value  = s.company_size_max || '';
+  document.getElementById('s-goal').value      = s.daily_send_goal || 100;
+  document.getElementById('s-sub1').value      = s.email_subject_1 || '';
+  document.getElementById('s-sub2').value      = s.email_subject_2 || '';
+  document.getElementById('s-sub3').value      = s.email_subject_3 || '';
+  updateCurrentSettingsDisplay(s);
+}
+
+function updateCurrentSettingsDisplay(s) {
+  const el = document.getElementById('current-settings-display');
+  if (!s.target_location && !s.industry) { el.textContent = 'No settings saved yet.'; return; }
+  el.innerHTML = `
+    <strong>Current settings:</strong><br>
+    Location: ${s.target_location || '—'}<br>
+    Industry: ${s.industry || '—'}<br>
+    Titles: ${(s.job_titles || []).join(', ') || '—'}<br>
+    Company size: ${s.company_size_min || 1}–${s.company_size_max || 200} employees<br>
+    Daily goal: ${s.daily_send_goal || 100} emails
+  `;
+}
+
+async function saveSettings() {
+  const titles = document.getElementById('s-titles').value
+    .split('\n').map(t => t.trim()).filter(Boolean);
+
+  const body = {
+    target_location:  document.getElementById('s-location').value.trim(),
+    industry:         document.getElementById('s-industry').value.trim(),
+    job_titles:       titles,
+    company_size_min: parseInt(document.getElementById('s-size-min').value) || 1,
+    company_size_max: parseInt(document.getElementById('s-size-max').value) || 200,
+    daily_send_goal:  parseInt(document.getElementById('s-goal').value) || 100,
+    email_subject_1:  document.getElementById('s-sub1').value.trim(),
+    email_subject_2:  document.getElementById('s-sub2').value.trim(),
+    email_subject_3:  document.getElementById('s-sub3').value.trim(),
+  };
+
+  const result = await apiFetch('/api/campaign-settings', { method: 'POST', body: JSON.stringify(body) });
+  const banner = document.getElementById('save-banner');
+  if (result.success) {
+    settingsData = body;
+    updateCurrentSettingsDisplay(body);
+    banner.style.display = 'block';
+    setTimeout(() => banner.style.display = 'none', 3000);
+  } else {
+    banner.textContent = '✗ Save failed: ' + (result.error || 'unknown');
+    banner.style.background = 'var(--red-light)';
+    banner.style.color = 'var(--red)';
+    banner.style.display = 'block';
+    setTimeout(() => { banner.style.display = 'none'; banner.style.background = ''; banner.style.color = ''; }, 4000);
+  }
+}
+
+// ─── BOUNCE CHECK ─────────────────────────────────────────────────────────────
+async function checkBounces() {
+  const creds = graphCreds;
+  if (!creds.tenantId || !creds.clientId || !creds.clientSecret || !creds.userEmail) {
+    // Prompt for creds (reuse existing connect flow values from localStorage)
+    alert('Graph credentials not found in localStorage. Connect Outlook first via the main app.');
+    return;
+  }
+
+  const btn = document.querySelector('.btn-ghost');
+  btn.textContent = '⏳ Checking...';
+  btn.disabled = true;
+
+  const result = await apiFetch('/api/bounce-check', {
+    method: 'POST',
+    body: JSON.stringify(creds)
+  });
+
+  btn.textContent = '🔍 Check bounces';
+  btn.disabled = false;
+
+  if (result.error) { alert('Bounce check error: ' + result.error); return; }
+
+  if (result.marked > 0) {
+    alert(`Found ${result.checked} NDR messages.\n${result.marked} contact(s) marked BOUNCED:\n${result.bounced.join('\n')}`);
+    loadAll(); // refresh pipeline
+  } else {
+    alert(`Checked ${result.checked} NDR messages. No new bounces found.`);
+  }
+}
+
+// ─── CONTACT MODAL ────────────────────────────────────────────────────────────
+function showContact(c) {
+  document.getElementById('modal-title').textContent =
+    [c.firstname, c.lastname].filter(Boolean).join(' ') || c.email;
+
+  const openInfo = c.human_opened
+    ? `<span style="color:var(--moz)">✓ Opened (human confirmed)</span>`
+    : c.open_count > 0
+      ? `<span style="color:var(--text-3)">~ Opens recorded (may be bot)</span>`
+      : '—';
+
+  document.getElementById('modal-body').innerHTML = `
+    <table style="font-size:13px;width:100%;border-collapse:collapse">
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0;width:40%">Email</td><td>${escHtml(c.email)}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Company</td><td>${escHtml(c.company || '—')}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Status</td><td>${c.status || '—'}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Email 1 sent</td><td>${fmtDate(c.email1_sent_at)}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Email 2 sent</td><td>${fmtDate(c.email2_sent_at)}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Email 3 sent</td><td>${fmtDate(c.email3_sent_at)}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Opens (human)</td><td>${openInfo}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Clicks</td><td>${c.click_count || 0}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Batch</td><td>${c.batch_id || '—'}</td></tr>
+    </table>`;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function showTab(name, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('en-CA', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────────
+if (!token) {
+  document.body.innerHTML = '<div style="text-align:center;padding:4rem;font-family:sans-serif;color:#888">Not logged in — <a href="/login.html">Sign in</a></div>';
+} else {
+  loadAll();
+  // Store creds from URL params if provided (for bounce check)
+  const params = new URLSearchParams(location.search);
+  if (params.get('tenantId')) {
+    graphCreds = { tenantId: params.get('tenantId'), clientId: params.get('clientId'), clientSecret: params.get('clientSecret'), userEmail: params.get('userEmail') };
+    localStorage.setItem('mozok_creds', JSON.stringify(graphCreds));
+  }
+}
+</script>
+</body>
+</html>
