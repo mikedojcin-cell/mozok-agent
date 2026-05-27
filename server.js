@@ -13,7 +13,7 @@ const META_APP_SECRET = process.env.META_APP_SECRET;
 const META_REDIRECT = 'https://app.mozok.co/auth/meta/callback';
 const BASE_URL = 'https://app.mozok.co';
 
-// ─── AUTH MIDDLEWARE ──────────────────────────────────────────────────────────
+// âââ AUTH MIDDLEWARE ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async function requireAuth(req, res, next) {
   const auth = req.headers['authorization'];
@@ -56,7 +56,7 @@ app.use('/api/graph', requireAuth);
 app.use('/api/meta', requireAuth);
 app.use('/api/generate-post', requireAuth);
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// âââ HELPERS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 async function supabase(method, endpoint, body) {
   return new Promise((resolve, reject) => {
@@ -139,7 +139,7 @@ async function metaGet(url) {
   });
 }
 
-// ─── EMAIL CLICK TRACKING (public) ───────────────────────────────────────────
+// âââ EMAIL CLICK TRACKING (public) âââââââââââââââââââââââââââââââââââââââââââ
 
 app.get('/track/click/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -150,7 +150,7 @@ app.get('/track/click/:contactId', async (req, res) => {
       event_type: 'click',
       metadata: redirectUrl
     });
-    const contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=click_count`);
+    let contacts = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=click_count`);
     const currentCount = contacts[0]?.click_count || 0;
     await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, {
       click_count: currentCount + 1,
@@ -162,7 +162,7 @@ app.get('/track/click/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
-// ─── CLEAN VISIT REDIRECT (public) ───────────────────────────────────────────
+// âââ CLEAN VISIT REDIRECT (public) âââââââââââââââââââââââââââââââââââââââââââ
 
 app.get('/visit/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -185,7 +185,7 @@ app.get('/visit/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
-// ─── EMAIL OPEN TRACKING (public) ────────────────────────────────────────────
+// âââ EMAIL OPEN TRACKING (public) ââââââââââââââââââââââââââââââââââââââââââââ
 
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
@@ -209,13 +209,15 @@ app.get('/track/open/:contactId', async (req, res) => {
   res.end(PIXEL);
 });
 
-// ─── EMAIL PIPELINE API (protected) ──────────────────────────────────────────
+// âââ EMAIL PIPELINE API (protected) ââââââââââââââââââââââââââââââââââââââââââ
 
 app.get('/api/pipeline', async (req, res) => {
   try {
-    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at,batch_id');
+    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at');
     const now = Date.now();
     const pipeline = { ready:[], email1_sent:[], email2_due:[], email2_sent:[], email3_due:[], email3_sent:[], clicked:[], bounced:[] };
+    if (!Array.isArray(contacts)) return res.json({ error: contacts?.message || 'Supabase error', pipeline: {}, total: 0, batch_stats: [], sent_today: 0 });
+
     for (const c of contacts) {
       const hasClicked=(c.click_count||0)>0;
       const e1sent=c.email1_sent_at?new Date(c.email1_sent_at):null;
@@ -241,7 +243,7 @@ app.get('/api/pipeline', async (req, res) => {
   } catch(e){res.json({error:e.message});}
 });
 
-// ─── GRAPH / SUPABASE API (protected) ────────────────────────────────────────
+// âââ GRAPH / SUPABASE API (protected) ââââââââââââââââââââââââââââââââââââââââ
 
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
@@ -365,7 +367,7 @@ app.post('/api/graph', async (req, res) => {
   }
 });
 
-// ─── META OAUTH ───────────────────────────────────────────────────────────────
+// âââ META OAUTH âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 app.get('/auth/meta', (req, res) => {
   const { clientId } = req.query;
@@ -388,14 +390,14 @@ app.get('/auth/meta/callback', async (req, res) => {
   }
 });
 
-// ─── META INSIGHTS (protected) ───────────────────────────────────────────────
+// âââ META INSIGHTS (protected) âââââââââââââââââââââââââââââââââââââââââââââââ
 
 app.get('/api/meta/pages/:clientId', async (req, res) => {
   const { clientId } = req.params;
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token â client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     res.json({ pages: pages.data || [] });
   } catch(e) {
@@ -408,7 +410,7 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token â client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     if (!pages.data || !pages.data.length) return res.json({ error: 'No pages found' });
     const page = pages.data[0];
@@ -424,7 +426,7 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   }
 });
 
-// ─── CONTACT FORM (public) ────────────────────────────────────────────────────
+// âââ CONTACT FORM (public) ââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 app.post('/api/contact', async (req, res) => {
   const { name, email, message } = req.body;
@@ -457,7 +459,7 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// ─── CLAUDE POST GENERATOR (protected) ───────────────────────────────────────
+// âââ CLAUDE POST GENERATOR (protected) âââââââââââââââââââââââââââââââââââââââ
 
 app.post('/api/generate-post', async (req, res) => {
   const { prompt } = req.body;
@@ -498,7 +500,7 @@ app.post('/api/generate-post', async (req, res) => {
   }
 });
 
-// ─── CATCH ALL ────────────────────────────────────────────────────────────────
+// âââ CATCH ALL ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
