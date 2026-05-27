@@ -1,19 +1,19 @@
 <!DOCTYPE html>
 <!--
   MOZOK PIPELINE UPGRADE
-  ──────────────────────
+  ââââââââââââââââââââââ
   This file is a SELF-CONTAINED replacement for the pipeline section of index.html.
   It includes:
-    • Daily send progress bar (X / 100 goal)
-    • Batch history (per-session sent counts)
-    • Bot vs human open indicators
-    • Bounce badges
-    • Campaign Settings panel (Apollo search params, configurable without touching code)
-    • Check-bounces button
+    â¢ Daily send progress bar (X / 100 goal)
+    â¢ Batch history (per-session sent counts)
+    â¢ Bot vs human open indicators
+    â¢ Bounce badges
+    â¢ Campaign Settings panel (Apollo search params, configurable without touching code)
+    â¢ Check-bounces button
 
   HOW TO USE:
-  Option A (standalone) — open this file directly at /pipeline-upgrade.html on your server.
-  Option B (merge)      — copy the <style> block into index.html's <style>,
+  Option A (standalone) â open this file directly at /pipeline-upgrade.html on your server.
+  Option B (merge)      â copy the <style> block into index.html's <style>,
                           copy the <body> HTML into your pipeline tab section,
                           copy the <script> block into your existing JS.
 
@@ -25,7 +25,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Mozok — Pipeline</title>
+<title>Mozok â Pipeline</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -157,8 +157,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     <div class="hdr-right">
       <span class="conn-dot" id="conn-dot"></span>
       <span class="conn-label" id="conn-text">connecting...</span>
-      <button class="btn btn-ghost btn-sm" onclick="checkBounces()">🔍 Check bounces</button>
-      <button class="btn btn-primary btn-sm" onclick="loadAll()">↻ Refresh</button>
+      <button class="btn btn-ghost btn-sm" onclick="checkBounces()">ð Check bounces</button>
+      <button class="btn btn-primary btn-sm" onclick="loadAll()">â» Refresh</button>
     </div>
   </div>
 
@@ -175,25 +175,22 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </div>
     <div class="stat-card">
       <div class="stat-label">Ready to send</div>
-      <div class="stat-val" id="st-ready">—</div>
+      <div class="stat-val" id="st-ready">â</div>
       <div class="stat-sub">first touch</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Follow-ups due</div>
-      <div class="stat-val" id="st-due">—</div>
+      <div class="stat-val" id="st-due">â</div>
       <div class="stat-sub">email 2 + 3</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Clicked links</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">Clicked links</div>
-      <div class="stat-val" id="st-clicked">—</div>
+      <div class="stat-val" id="st-clicked">â</div>
       <div class="stat-sub">high intent</div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Bounced</div>
-      <div class="stat-val" id="st-bounced" style="color:var(--red)">—</div>
+      <div class="stat-val" id="st-bounced" style="color:var(--red)">â</div>
       <div class="stat-sub">undeliverable</div>
     </div>
   </div>
@@ -202,17 +199,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   <div class="tabs">
     <button class="tab active" onclick="showTab('pipeline',this)">Pipeline</button>
     <button class="tab" onclick="showTab('batches',this)">Batch history</button>
-    <button class="tab" onclick="showTab('settings',this)">⚙ Campaign settings</button>
+    <button class="tab" onclick="showTab('settings',this)">â Campaign settings</button>
   </div>
 
-  <!-- ── PIPELINE VIEW ──────────────────────────────────────────────────── -->
+  <!-- ââ PIPELINE VIEW ââââââââââââââââââââââââââââââââââââââââââââââââââââ -->
   <div id="view-pipeline" class="view active">
     <div class="pipeline-grid" id="pipeline-grid">
       <!-- rendered by JS -->
     </div>
   </div>
 
-  <!-- ── BATCH HISTORY VIEW ────────────────────────────────────────────── -->
+  <!-- ââ BATCH HISTORY VIEW ââââââââââââââââââââââââââââââââââââââââââââââ -->
   <div id="view-batches" class="view">
     <div class="section-title">Email batches sent (last 14)</div>
     <table class="tbl">
@@ -227,7 +224,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
     </table>
   </div>
 
-  <!-- ── CAMPAIGN SETTINGS VIEW ───────────────────────────────────────── -->
+  <!-- ââ CAMPAIGN SETTINGS VIEW âââââââââââââââââââââââââââââââââââââââââ -->
   <div id="view-settings" class="view">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
       <div style="font-size:14px;font-weight:500">Campaign settings</div>
@@ -238,10 +235,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
       <!-- LEFT: APOLLO SEARCH PARAMS -->
       <div class="settings-card">
-        <div class="card-title">🔍 Apollo prospect search</div>
+        <div class="card-title">ð Apollo prospect search</div>
         <p style="font-size:12px;color:var(--text-3);margin-bottom:1rem;line-height:1.6">
           These filters are used when pulling prospects from Apollo.
-          Change them here — no code changes needed.
+          Change them here â no code changes needed.
         </p>
 
         <div class="field">
@@ -264,11 +261,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div class="field">
-            <label>Company size — min employees</label>
+            <label>Company size â min employees</label>
             <input id="s-size-min" type="number" placeholder="1" />
           </div>
           <div class="field">
-            <label>Company size — max employees</label>
+            <label>Company size â max employees</label>
             <input id="s-size-max" type="number" placeholder="200" />
           </div>
         </div>
@@ -277,7 +274,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
       <!-- RIGHT: SEND SETTINGS + EMAIL SUBJECTS -->
       <div>
         <div class="settings-card" style="margin-bottom:1.25rem">
-          <div class="card-title">📬 Send settings</div>
+          <div class="card-title">ð¬ Send settings</div>
 
           <div class="field">
             <label>Daily send goal</label>
@@ -287,7 +284,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
         </div>
 
         <div class="settings-card">
-          <div class="card-title">✉ Default email subjects</div>
+          <div class="card-title">â Default email subjects</div>
           <p style="font-size:12px;color:var(--text-3);margin-bottom:1rem;line-height:1.6">
             Pre-fill the subject line for each email in the sequence.
           </p>
@@ -298,17 +295,17 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
           </div>
           <div class="field">
             <label>Email 2 subject (follow-up)</label>
-            <input id="s-sub2" placeholder="Following up — [Company]" />
+            <input id="s-sub2" placeholder="Following up â [Company]" />
           </div>
           <div class="field">
             <label>Email 3 subject (final)</label>
-            <input id="s-sub3" placeholder="Last note — [Company]" />
+            <input id="s-sub3" placeholder="Last note â [Company]" />
           </div>
         </div>
       </div>
     </div>
 
-    <div class="save-banner" id="save-banner">✓ Settings saved successfully.</div>
+    <div class="save-banner" id="save-banner">â Settings saved successfully.</div>
 
     <!-- APOLLO PULL INSTRUCTIONS -->
     <div style="background:var(--surface);border:.5px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;margin-top:.5rem">
@@ -319,7 +316,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
           "Run an Apollo pull using the current campaign settings"
         </code><br><br>
         Claude will read your saved location, industry, job titles and company size filters,
-        search Apollo, and import the results directly into your pipeline — no manual setup.
+        search Apollo, and import the results directly into your pipeline â no manual setup.
       </p>
       <div id="current-settings-display" style="margin-top:1rem;font-size:12px;color:var(--text-3);line-height:1.8"></div>
     </div>
@@ -339,11 +336,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 </div>
 
 <script>
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
+// âââ CONFIG ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 const BASE_URL = 'https://app.mozok.co'; // change if your server URL differs
 const token = localStorage.getItem('mozok_token') || '';
 
-// ─── AUTH FETCH ───────────────────────────────────────────────────────────────
+// âââ AUTH FETCH âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function apiFetch(path, opts = {}) {
   const res = await fetch(BASE_URL + path, {
     ...opts,
@@ -352,27 +349,27 @@ async function apiFetch(path, opts = {}) {
   return res.json().catch(() => ({}));
 }
 
-// ─── STATE ────────────────────────────────────────────────────────────────────
+// âââ STATE ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 let pipelineData = null;
 let settingsData = {};
 let graphCreds = JSON.parse(localStorage.getItem('mozok_creds') || '{}');
 
-// ─── PIPELINE COLUMN DEFINITIONS ─────────────────────────────────────────────
+// âââ PIPELINE COLUMN DEFINITIONS âââââââââââââââââââââââââââââââââââââââââââââ
 const COLS = [
   { key: 'ready',       label: 'Ready',         color: '#1D9E75', desc: 'Not yet contacted' },
   { key: 'email1_sent', label: 'Email 1 sent',  color: '#0C447C', desc: 'Waiting 5 days' },
-  { key: 'email2_due',  label: '⚡ Email 2 due', color: '#633806', desc: 'Follow-up needed!' },
+  { key: 'email2_due',  label: 'â¡ Email 2 due', color: '#633806', desc: 'Follow-up needed!' },
   { key: 'email2_sent', label: 'Email 2 sent',  color: '#3C3489', desc: 'Waiting 5 days' },
-  { key: 'email3_due',  label: '⚡ Email 3 due', color: '#633806', desc: 'Final touch needed!' },
+  { key: 'email3_due',  label: 'â¡ Email 3 due', color: '#633806', desc: 'Final touch needed!' },
 ];
 const COLS_RIGHT = [
   { key: 'email3_sent', label: 'Sequence done', color: '#444441', desc: 'All 3 sent' },
-  { key: 'clicked',     label: '🔥 Clicked',    color: '#0C447C', desc: 'High intent' },
-  { key: 'bounced',     label: '⛔ Bounced',    color: '#d63031', desc: 'Undeliverable' },
+  { key: 'clicked',     label: 'ð¥ Clicked',    color: '#0C447C', desc: 'High intent' },
+  { key: 'bounced',     label: 'â Bounced',    color: '#d63031', desc: 'Undeliverable' },
 ];
 const ALL_COLS = [...COLS, ...COLS_RIGHT];
 
-// ─── LOAD ALL DATA ────────────────────────────────────────────────────────────
+// âââ LOAD ALL DATA ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function loadAll() {
   document.getElementById('conn-dot').className = 'conn-dot';
   document.getElementById('conn-text').textContent = 'connecting...';
@@ -399,7 +396,7 @@ async function loadAll() {
   populateSettingsForm(settings);
 }
 
-// ─── STATS BAR ────────────────────────────────────────────────────────────────
+// âââ STATS BAR ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function renderStats(pipe, settings) {
   const pl = pipe.pipeline || {};
   const goal = settings.daily_send_goal || 100;
@@ -409,7 +406,7 @@ function renderStats(pipe, settings) {
   document.getElementById('sent-today').innerHTML = `${sent} <span>/ <span id="daily-goal">${goal}</span></span>`;
   document.getElementById('prog-fill').style.width = pct + '%';
   document.getElementById('prog-fill').className = 'prog-fill' + (pct >= 100 ? ' danger' : pct >= 70 ? '' : '');
-  document.getElementById('prog-label').textContent = `${sent} of ${goal} daily goal — ${pct}%`;
+  document.getElementById('prog-label').textContent = `${sent} of ${goal} daily goal â ${pct}%`;
 
   const due = (pl.email2_due?.length || 0) + (pl.email3_due?.length || 0);
   document.getElementById('st-ready').textContent   = pl.ready?.length || 0;
@@ -418,7 +415,7 @@ function renderStats(pipe, settings) {
   document.getElementById('st-bounced').textContent = pl.bounced?.length || 0;
 }
 
-// ─── PIPELINE GRID ────────────────────────────────────────────────────────────
+// âââ PIPELINE GRID ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function renderPipeline(pipe) {
   const pl = pipe.pipeline || {};
   const grid = document.getElementById('pipeline-grid');
@@ -445,15 +442,15 @@ function renderPipeline(pipe) {
       items.forEach(c => {
         const name = [c.firstname, c.lastname].filter(Boolean).join(' ') || c.email;
         const badges = [];
-        if (c.human_opened) badges.push(`<span class="badge b-open">👁 opened</span>`);
-        if ((c.click_count || 0) > 0) badges.push(`<span class="badge b-click">🔗 clicked</span>`);
-        if (c.status === 'BOUNCED') badges.push(`<span class="badge b-bounce">⛔ bounced</span>`);
-        if (isDue) badges.push(`<span class="badge b-due">⚡ due</span>`);
-        if (c.batch_id) badges.push(`<span class="badge b-batch">${c.batch_id.replace('_', ' · ')}</span>`);
+        if (c.human_opened) badges.push(`<span class="badge b-open">ð opened</span>`);
+        if ((c.click_count || 0) > 0) badges.push(`<span class="badge b-click">ð clicked</span>`);
+        if (c.status === 'BOUNCED') badges.push(`<span class="badge b-bounce">â bounced</span>`);
+        if (isDue) badges.push(`<span class="badge b-due">â¡ due</span>`);
+        if (c.batch_id) badges.push(`<span class="badge b-batch">${c.batch_id.replace('_', ' Â· ')}</span>`);
 
         html += `<div class="c-card" onclick="showContact(${JSON.stringify(c).replace(/"/g,'&quot;')})">
           <div class="c-name">${escHtml(name)}</div>
-          <div class="c-company">${escHtml(c.company || '—')}</div>
+          <div class="c-company">${escHtml(c.company || 'â')}</div>
           ${badges.length ? `<div class="c-badges">${badges.join('')}</div>` : ''}
         </div>`;
       });
@@ -465,7 +462,7 @@ function renderPipeline(pipe) {
   grid.innerHTML = html;
 }
 
-// ─── BATCH HISTORY ────────────────────────────────────────────────────────────
+// âââ BATCH HISTORY ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function renderBatches(batches) {
   const tbody = document.getElementById('batch-tbody');
   if (!batches.length) {
@@ -496,7 +493,7 @@ function renderBatches(batches) {
   }).join('');
 }
 
-// ─── SETTINGS FORM ────────────────────────────────────────────────────────────
+// âââ SETTINGS FORM ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function populateSettingsForm(s) {
   document.getElementById('s-location').value  = s.target_location || '';
   document.getElementById('s-industry').value  = s.industry || '';
@@ -515,10 +512,10 @@ function updateCurrentSettingsDisplay(s) {
   if (!s.target_location && !s.industry) { el.textContent = 'No settings saved yet.'; return; }
   el.innerHTML = `
     <strong>Current settings:</strong><br>
-    Location: ${s.target_location || '—'}<br>
-    Industry: ${s.industry || '—'}<br>
-    Titles: ${(s.job_titles || []).join(', ') || '—'}<br>
-    Company size: ${s.company_size_min || 1}–${s.company_size_max || 200} employees<br>
+    Location: ${s.target_location || 'â'}<br>
+    Industry: ${s.industry || 'â'}<br>
+    Titles: ${(s.job_titles || []).join(', ') || 'â'}<br>
+    Company size: ${s.company_size_min || 1}â${s.company_size_max || 200} employees<br>
     Daily goal: ${s.daily_send_goal || 100} emails
   `;
 }
@@ -547,7 +544,7 @@ async function saveSettings() {
     banner.style.display = 'block';
     setTimeout(() => banner.style.display = 'none', 3000);
   } else {
-    banner.textContent = '✗ Save failed: ' + (result.error || 'unknown');
+    banner.textContent = 'â Save failed: ' + (result.error || 'unknown');
     banner.style.background = 'var(--red-light)';
     banner.style.color = 'var(--red)';
     banner.style.display = 'block';
@@ -555,7 +552,7 @@ async function saveSettings() {
   }
 }
 
-// ─── BOUNCE CHECK ─────────────────────────────────────────────────────────────
+// âââ BOUNCE CHECK âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 async function checkBounces() {
   const creds = graphCreds;
   if (!creds.tenantId || !creds.clientId || !creds.clientSecret || !creds.userEmail) {
@@ -565,7 +562,7 @@ async function checkBounces() {
   }
 
   const btn = document.querySelector('.btn-ghost');
-  btn.textContent = '⏳ Checking...';
+  btn.textContent = 'â³ Checking...';
   btn.disabled = true;
 
   const result = await apiFetch('/api/bounce-check', {
@@ -573,7 +570,7 @@ async function checkBounces() {
     body: JSON.stringify(creds)
   });
 
-  btn.textContent = '🔍 Check bounces';
+  btn.textContent = 'ð Check bounces';
   btn.disabled = false;
 
   if (result.error) { alert('Bounce check error: ' + result.error); return; }
@@ -586,34 +583,34 @@ async function checkBounces() {
   }
 }
 
-// ─── CONTACT MODAL ────────────────────────────────────────────────────────────
+// âââ CONTACT MODAL ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function showContact(c) {
   document.getElementById('modal-title').textContent =
     [c.firstname, c.lastname].filter(Boolean).join(' ') || c.email;
 
   const openInfo = c.human_opened
-    ? `<span style="color:var(--moz)">✓ Opened (human confirmed)</span>`
+    ? `<span style="color:var(--moz)">â Opened (human confirmed)</span>`
     : c.open_count > 0
       ? `<span style="color:var(--text-3)">~ Opens recorded (may be bot)</span>`
-      : '—';
+      : 'â';
 
   document.getElementById('modal-body').innerHTML = `
     <table style="font-size:13px;width:100%;border-collapse:collapse">
       <tr><td style="color:var(--text-3);padding:6px 12px 6px 0;width:40%">Email</td><td>${escHtml(c.email)}</td></tr>
-      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Company</td><td>${escHtml(c.company || '—')}</td></tr>
-      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Status</td><td>${c.status || '—'}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Company</td><td>${escHtml(c.company || 'â')}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Status</td><td>${c.status || 'â'}</td></tr>
       <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Email 1 sent</td><td>${fmtDate(c.email1_sent_at)}</td></tr>
       <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Email 2 sent</td><td>${fmtDate(c.email2_sent_at)}</td></tr>
       <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Email 3 sent</td><td>${fmtDate(c.email3_sent_at)}</td></tr>
       <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Opens (human)</td><td>${openInfo}</td></tr>
       <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Clicks</td><td>${c.click_count || 0}</td></tr>
-      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Batch</td><td>${c.batch_id || '—'}</td></tr>
+      <tr><td style="color:var(--text-3);padding:6px 12px 6px 0">Batch</td><td>${c.batch_id || 'â'}</td></tr>
     </table>`;
   document.getElementById('modal').style.display = 'flex';
 }
 function closeModal() { document.getElementById('modal').style.display = 'none'; }
 
-// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+// âââ TAB SWITCHING ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function showTab(name, btn) {
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -621,19 +618,20 @@ function showTab(name, btn) {
   btn.classList.add('active');
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
+// âââ HELPERS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 function escHtml(s) {
   return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function fmtDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return 'â';
   const d = new Date(iso);
   return d.toLocaleDateString('en-CA', { month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit' });
 }
 
-// ─── BOOT ─────────────────────────────────────────────────────────────────────
+// âââ BOOT âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 if (!token) {
-  document.body.innerHTML = '<div style="text-align:center;padding:4rem;font-family:sans-serif;color:#888">Not logged in — <a href="/login.html">Sign in</a></div>';
+  window.location.href = '/login.html';
+  return;
 } else {
   loadAll();
   // Store creds from URL params if provided (for bounce check)
