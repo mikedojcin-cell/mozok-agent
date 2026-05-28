@@ -9,7 +9,7 @@ const SUPABASE_URL = 'https://kwyycykglqrokqsbuiny.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
 const META_APP_ID = process.env.META_APP_ID;
-const META_APP_SECRET = process.env.META_APP_SECRET;
+const META_APP_SECRET = process.env.META_APP_SCRET;
 const META_REDIRECT = 'https://app.mozok.co/auth/meta/callback';
 const BASE_URL = 'https://app.mozok.co';
 
@@ -232,7 +232,8 @@ app.get('/api/pipeline', async (req, res) => {
       else if(c.status==='EMAIL_2_SENT')pipeline.email2_sent.push(c);
       else if(c.status==='EMAIL_1_SENT'&&e1days>=5)pipeline.email2_due.push(c);
       else if(c.status==='EMAIL_1_SENT')pipeline.email1_sent.push(c);
-      else pipeline.ready.push(c);
+else if (c.human_opened) pipeline.email1_sent.push(c);
+            else pipeline.ready.push(c);
     }
     const batchMap={};
     for(const c of contacts){if(!c.batch_id)continue;if(!batchMap[c.batch_id])batchMap[c.batch_id]={batch_id:c.batch_id,count:0,date:c.batch_id.split('_')[0]};batchMap[c.batch_id].count++;}
