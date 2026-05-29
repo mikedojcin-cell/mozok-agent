@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mozok CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --moz:#1D9E75;--moz-light:#e8f7f1;--moz-dark:#147a59;
+  --bg:#f4f4f2;--surface:#fff;--surface2:#fafaf9;
+  --border:rgba(0,0,0,.09);--border-mid:rgba(0,0,0,.14);--border-strong:rgba(0,0,0,.22);
+  --text:#18181a;--text-2:#4f4f52;--text-3:#8e8e93;
+  --red:#d63031;--red-light:#fff0f0;
+  --amber:#f59e0b;--amber-light:#fffbeb;
+  --blue:#2563eb;--blue-light:#eff6ff;
+  --purple:#7c3aed;--purple-light:#f5f3ff;
+  --green:#1D9E75;--green-light:#e8f7f1;
+  --radius:8px;--radius-lg:12px;--radius-xl:16px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+  --shadow-md:0 4px 6px rgba(0,0,0,.07),0 2px 4px rgba(0,0,0,.06);
+}
+
+html{height:100%}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);height:100%;display:flex;flex-direction:column}
+
+/* -- TOPBAR -- */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;height:56px;background:var(--surface);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
+  box-shadow:0 1px 0 var(--border);
+}
+.logo{font-size:18px;font-weight:700;color:var(--moz);letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.logo-dot{width:8px;height:8px;background:var(--moz);border-radius:50%;display:inline-block}
+.topbar-center{display:flex;align-items:center;gap:6px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.user-chip{font-size:12px;color:var(--text-3);background:var(--bg);border:1px solid var(--border-mid);padding:4px 10px;border-radius:20px}
+.btn{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:500;font-family:inherit;padding:7px 14px;border-radius:var(--radius);cursor:pointer;border:none;transition:all .15s;white-space:nowrap}
+.btn-primary{background:var(--moz);color:#fff}
+.btn-primary:hover{background:var(--moz-dark)}
+.btn-primary:disabled{opacity:.45;cursor:default}
+.btn-ghost{background:transparent;border:1px solid var(--border-mid);color:var(--text-2)}
+.btn-ghost:hover{background:var(--bg)}
+.btn-sm{font-size:12px;padding:5px 10px}
+.btn-danger{background:var(--red);color:#fff}
+.btn-danger:hover{opacity:.88}
+.btn-icon{width:32px;height:32px;padding:0;justify-content:center;border-radius:var(--radius);background:transparent;border:1px solid var(--border-mid);color:var(--text-2);cursor:pointer;font-size:15px;transition:all .15s}
+.btn-icon:hover{background:var(--bg)}
+
+/* -- LAYOUT -- */
+.layout{display:flex;flex:1;min-height:0;overflow:hidden}
+
+/* -- SIDEBAR -- */
+.sidebar{
+  width:260px;flex-shrink:0;background:var(--surface);
+  border-right:1px solid var(--border);overflow-y:auto;
+  padding:16px 0;display:flex;flex-direction:column;gap:0;
+}
+.sidebar-section{padding:0 16px 16px}
+.sidebar-section + .sidebar-section{border-top:1px solid var(--border);padding-top:16px}
+.sidebar-label{font-size:10px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat-tile{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 11px}
+.stat-tile-val{font-size:20px;font-weight:700;color:var(--text);line-height:1}
+.stat-tile-sub{font-size:10px;color:var(--text-3);margin-top:3px;font-weight:500}
+.stat-tile.full{grid-column:1/-1}
+.stat-tile.green .stat-tile-val{color:var(--moz)}
+.stat-tile.red .stat-tile-val{color:var(--red)}
+.stat-tile.amber .stat-tile-val{color:var(--amber)}
+
+/* send progress */
+.send-prog{margin-top:10px}
+.send-prog-bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-top:6px}
+.send-prog-fill{height:100%;border-radius:3px;background:var(--moz);transition:width .5s ease}
+.send-prog-fill.warn{background:var(--amber)}
+.send-prog-fill.over{background:var(--red)}
+.send-prog-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-3);margin-top:4px}
+
+/* apollo filters */
+.filter-field{margin-bottom:10px}
+.filter-field label{display:block;font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:4px}
+.filter-field input,.filter-field select,.filter-field textarea{
+  width:100%;font-size:12px;font-family:inherit;color:var(--text);
+  background:var(--bg);border:1px solid var(--border-mid);
+  border-radius:var(--radius);padding:6px 9px;outline:none;transition:border-color .15s;
+}
+.filter-field input:focus,.filter-field select:focus,.filter-field textarea:focus{border-color:var(--moz)}
+.filter-field textarea{resize:vertical;min-height:56px;line-height:1.4}
+.filter-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sidebar-actions{padding:0 16px;display:flex;flex-direction:column;gap:8px;margin-top:auto}
+
+/* -- MAIN -- */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* table controls */
+.table-controls{
+  display:flex;align-items:center;gap:10px;padding:12px 20px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;flex-wrap:wrap;
+}
+.search-wrap{position:relative;flex:1;min-width:180px;max-width:340px}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none}
+.search-input{
+  width:100%;padding:7px 10px 7px 31px;font-size:13px;font-family:inherit;
+  border:1px solid var(--border-mid);border-radius:var(--radius);background:var(--bg);
+  outline:none;color:var(--text);transition:border-color .15s;
+}
+.search-input:focus{border-color:var(--moz)}
+.filter-select{
+  font-size:12px;font-family:inherit;color:var(--text);
+  border:1px solid var(--border-mid);border-radius:var(--radius);
+  padding:7px 10px;background:var(--bg);outline:none;cursor:pointer;
+}
+.filter-select:focus{border-color:var(--moz)}
+.controls-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.count-chip{font-size:12px;color:var(--text-3);white-space:nowrap}
+.selection-bar{
+  display:flex;align-items:center;gap:10px;padding:8px 20px;
+  background:var(--moz-light);border-bottom:1px solid rgba(29,158,117,.2);
+  font-size:13px;color:var(--moz-dark);flex-shrink:0;
+}
+.selection-bar.hidden{display:none}
+
+/* table wrapper */
+.table-wrap{flex:1;overflow:auto;min-height:0}
+table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px}
+thead{position:sticky;top:0;z-index:10}
+thead tr{background:var(--surface2);border-bottom:1px solid var(--border-mid)}
+th{
+  padding:10px 12px;text-align:left;font-size:11px;font-weight:600;
+  color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;
+  white-space:nowrap;border-right:1px solid var(--border);cursor:pointer;
+  user-select:none;
+}
+th:last-child{border-right:none}
+th.sortable:hover{background:var(--bg);color:var(--text-2)}
+th .sort-icon{margin-left:4px;opacity:.4;font-style:normal}
+th.sort-asc .sort-icon::after{content:"\2191";opacity:1}
+th.sort-desc .sort-icon::after{content:"\2193";opacity:1}
+th .sort-icon::after{content:"\2195"}
+th:not(.sortable) .sort-icon{display:none}
+
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;cursor:default}
+tbody tr:hover{background:var(--surface2)}
+tbody tr.selected{background:var(--moz-light) !important}
+tbody tr.selected td{border-color:rgba(29,158,117,.18)}
+td{padding:10px 12px;border-right:1px solid var(--border);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+td:last-child{border-right:none}
+
+/* col widths */
+.col-check{width:36px;text-align:center}
+.col-name{width:160px}
+.col-company{width:150px}
+.col-email{width:200px}
+.col-status{width:130px}
+.col-e1{width:90px;text-align:center}
+.col-e2{width:90px;text-align:center}
+.col-e3{width:90px;text-align:center}
+.col-opened{width:80px;text-align:center}
+.col-next{width:150px}
+
+/* checkbox */
+input[type=checkbox]{accent-color:var(--moz);width:15px;height:15px;cursor:pointer}
+
+/* STATUS BADGES */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;white-space:nowrap}
+.badge-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.badge-ready{background:#f0f0ef;color:#555;} .badge-ready .badge-dot{background:#aaa}
+.badge-e1{background:var(--blue-light);color:var(--blue);} .badge-e1 .badge-dot{background:var(--blue)}
+.badge-e2due{background:var(--amber-light);color:#b45309;} .badge-e2due .badge-dot{background:var(--amber)}
+.badge-e2{background:#eff6ff;color:#1d4ed8;} .badge-e2 .badge-dot{background:#3b82f6}
+.badge-e3due{background:#fdf4ff;color:#7e22ce;} .badge-e3due .badge-dot{background:var(--purple)}
+.badge-e3{background:var(--purple-light);color:var(--purple);} .badge-e3 .badge-dot{background:var(--purple)}
+.badge-clicked{background:#ecfdf5;color:#065f46;} .badge-clicked .badge-dot{background:#10b981}
+.badge-bounced{background:var(--red-light);color:var(--red);} .badge-bounced .badge-dot{background:var(--red)}
+.badge-done{background:#f0fdf4;color:#166534;} .badge-done .badge-dot{background:#22c55e}
+
+/* date cells */
+.date-sent{font-size:11px;color:var(--text-2);text-align:center}
+.date-sent.empty{color:var(--text-3);text-align:center}
+.opened-yes{font-size:15px;text-align:center}
+.opened-no{font-size:12px;color:var(--text-3);text-align:center}
+
+/* next action */
+.next-action{font-size:12px;font-weight:500}
+.next-action.urgent{color:var(--amber);font-weight:600}
+.next-action.send-now{color:var(--moz);font-weight:600}
+.next-action.done{color:var(--text-3)}
+.next-action.bounce{color:var(--red)}
+.next-action.waiting{color:var(--text-3)}
+
+/* empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:64px 24px;color:var(--text-3);gap:12px}
+.empty-icon{font-size:40px}
+.empty-title{font-size:16px;font-weight:600;color:var(--text-2)}
+.empty-msg{font-size:13px;text-align:center;max-width:320px;line-height:1.5}
+
+/* loading */
+.loading-row td{text-align:center;padding:48px;color:var(--text-3);font-size:13px}
+
+/* toast */
+.toast-wrap{position:fixed;bottom:24px;right:24px;display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none}
+.toast{background:#1a1a18;color:#fff;font-size:13px;padding:10px 16px;border-radius:var(--radius);box-shadow:var(--shadow-md);opacity:0;transform:translateY(8px);transition:all .25s;pointer-events:none;max-width:320px}
+.toast.show{opacity:1;transform:none}
+.toast.success{background:var(--moz-dark)}
+.toast.error{background:var(--red)}
+
+/* modal */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:500;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--radius-xl);padding:24px;max-width:440px;width:90%;box-shadow:var(--shadow-md)}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal-msg{font-size:13px;color:var(--text-2);line-height:1.5;margin-bottom:20px}
+.modal-actions{display:flex;justify-content:flex-end;gap:10px}
+
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:3px}
+
+/* responsive clamps */
+@media(max-width:900px){
+  .sidebar{width:220px}
+  .col-e2,.col-e3{display:none}
+}
+@media(max-width:700px){
+  .sidebar{display:none}
+  .col-company{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo"><span class="logo-dot"></span>Mozok</div>
+  <div class="topbar-center">
+    <button class="btn btn-ghost btn-sm" id="btn-refresh">&#x27F3; Refresh</button>
+    <button class="btn btn-ghost btn-sm" id="btn-bounce-check">Check Bounces</button>
+  </div>
+  <div class="topbar-right">
+    <span class="user-chip" id="user-email-chip">Loading...</span>
+    <button class="btn btn-ghost btn-sm" id="btn-logout">Sign out</button>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+
+    <!-- STATS -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Overview</div>
+      <div class="stat-grid">
+        <div class="stat-tile full">
+          <div class="stat-tile-val" id="s-total">&mdash;</div>
+          <div class="stat-tile-sub">Total Contacts</div>
+          <div class="send-prog">
+            <div class="send-prog-bar"><div class="send-prog-fill" id="prog-fill" style="width:0%"></div></div>
+            <div class="send-prog-label"><span id="prog-sent">0 sent today</span><span id="prog-goal">/ 100 goal</span></div>
+          </div>
+        </div>
+        <div class="stat-tile green">
+          <div class="stat-tile-val" id="s-ready">&mdash;</div>
+          <div class="stat-tile-sub">Ready to Send</div>
+        </div>
+        <div class="stat-tile amber">
+          <div class="stat-tile-val" id="s-due">&mdash;</div>
+          <div class="stat-tile-sub">Follow-up Due</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-tile-val" id="s-opened">&mdash;</div>
+          <div class="stat-tile-sub">Opened</div>
+        </div>
+        <div class="stat-tile red">
+          <div class="stat-tile-val" id="s-bounced">&mdash;</div>
+          <div class="stat-tile-sub">Bounced</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- APOLLO FILTERS -->
+    <div class="sidebar-section">
+      <div class="sidebar-label">Apollo Search Criteria</div>
+
+      <div class="filter-field">
+        <label>Target Location</label>
+        <input type="text" id="s-location" placeholder="e.g. Toronto, Canada">
+      </div>
+
+      <div class="filter-field">
+        <label>Industry</label>
+        <input type="text" id="s-industry" placeholder="e.g. Real Estate">
+      </div>
+
+      <div class="filter-field">
+        <label>Job Titles (one per line)</label>
+        <textarea id="s-titles" placeholder="CEO&#10;Owner&#10;Founder"></textarea>
+      </div>
+
+      <div class="filter-row filter-field">
+        <div>
+          <label>Min Employees</label>
+          <input type="number" id="s-min" placeholder="1" min="1">
+        </div>
+        <div>
+          <label>Max Employees</label>
+          <input type="number" id="s-max" placeholder="200" min="1">
+        </div>
+      </div>
+
+      <div class="filter-field">
+        <label>Daily Send Goal</label>
+        <input type="number" id="s-goal" placeholder="100" min="1">
+      </div>
+
+      <div class="filter-field">
+        <label>Email 1 Subject</label>
+        <input type="text" id="s-sub1" placeholder="Quick idea for {{company}}">
+      </div>
+      <div class="filter-field">
+        <label>Email 2 Subject</label>
+        <input type="text" id="s-sub2" placeholder="Following up, {{firstname}}">
+      </div>
+      <div class="filter-field">
+        <label>Email 3 Subject</label>
+        <input type="text" id="s-sub3" placeholder="Last note for {{company}}">
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;justify-content:center" id="btn-save-settings">Save Settings</button>
+    </div>
+
+    <!-- SIDEBAR BOTTOM -->
+    <div class="sidebar-actions">
+      <button class="btn btn-ghost btn-sm" id="btn-export">Export CSV</button>
+    </div>
+
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- TABLE CONTROLS -->
+    <div class="table-controls">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input class="search-input" type="text" id="search" placeholder="Search name, company, email...">
+      </div>
+
+      <select class="filter-select" id="filter-status">
+        <option value="">All Statuses</option>
+        <option value="ready">Ready to Send</option>
+        <option value="e1">Email 1 Sent</option>
+        <option value="e2due">Follow-up Due (E2)</option>
+        <option value="e2">Email 2 Sent</option>
+        <option value="e3due">Follow-up Due (E3)</option>
+        <option value="e3">Email 3 Sent</option>
+        <option value="clicked">Clicked (High Intent)</option>
+        <option value="bounced">Bounced</option>
+      </select>
+
+      <select class="filter-select" id="filter-opened">
+        <option value="">All Opens</option>
+        <option value="yes">Opened</option>
+        <option value="no">Not Opened</option>
+      </select>
+
+      <div class="controls-right">
+        <span class="count-chip" id="count-chip">&mdash; contacts</span>
+        <button class="btn btn-ghost btn-sm" id="btn-select-all">Select all visible</button>
+      </div>
+    </div>
+
+    <!-- SELECTION BAR -->
+    <div class="selection-bar hidden" id="selection-bar">
+      <span id="sel-count">0 selected</span>
+      <button class="btn btn-primary btn-sm" id="btn-send-selected">Send Email 1 to selected</button>
+      <button class="btn btn-ghost btn-sm" id="btn-clear-selection">Clear</button>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-wrap">
+      <table id="contacts-table">
+        <thead>
+          <tr>
+            <th class="col-check"><input type="checkbox" id="master-check" title="Select all visible"></th>
+            <th class="col-name sortable" data-col="name">Name <i class="sort-icon"></i></th>
+            <th class="col-company sortable" data-col="company">Company <i class="sort-icon"></i></th>
+            <th class="col-email">Email</th>
+            <th class="col-status sortable" data-col="status">Status <i class="sort-icon"></i></th>
+            <th class="col-e1 sortable" data-col="e1">E1 Sent <i class="sort-icon"></i></th>
+            <th class="col-e2 sortable" data-col="e2">E2 Sent <i class="sort-icon"></i></th>
+            <th class="col-e3 sortable" data-col="e3">E3 Sent <i class="sort-icon"></i></th>
+            <th class="col-opened sortable" data-col="opened">Opened <i class="sort-icon"></i></th>
+            <th class="col-next sortable" data-col="nextDays">Next Action <i class="sort-icon"></i></th>
+          </tr>
+        </thead>
+        <tbody id="tbody">
+          <tr class="loading-row"><td colspan="10">Loading contacts...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<!-- TOAST -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Confirm</div>
+    <div class="modal-msg" id="modal-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="modal-cancel">Cancel</button>
+      <button class="btn btn-primary" id="modal-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// -- CONFIG ------------------------------------------------------------------
+const BASE_URL = 'https://app.mozok.co';
+
+// -- AUTH --------------------------------------------------------------------
+function getToken() { return localStorage.getItem('mozok_token'); }
+function getUserEmail() { return localStorage.getItem('mozok_user_email') || ''; }
+
+async function ensureAuth() {
+  // Check URL hash for Supabase password recovery tokens
+  const hash = window.location.hash;
+  if (hash.includes('access_token') && hash.includes('type=recovery')) {
+    const params = new URLSearchParams(hash.slice(1));
+    const token = params.get('access_token');
+    if (token) {
+      localStorage.setItem('mozok_token', token);
+      window.location.hash = '';
+    }
+  }
+  const token = getToken();
+  if (!token) { window.location.href = BASE_URL; return false; }
+  document.getElementById('user-email-chip').textContent = getUserEmail() || 'Logged in';
+  return true;
+}
+
+// -- API ---------------------------------------------------------------------
+async function api(method, path, body) {
+  const token = getToken();
+  const res = await fetch(BASE_URL + path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: 'Bearer ' + token } : {})
+    },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  });
+  if (res.status === 401) { localStorage.removeItem('mozok_token'); window.location.href = BASE_URL; }
+  return res.json();
+}
+
+// -- TOAST -------------------------------------------------------------------
+function toast(msg, type = '') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' ' + type : '');
+  el.textContent = msg;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => { requestAnimationFrame(() => { el.classList.add('show'); }); });
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 3500);
+}
+
+// -- CONFIRM MODAL ------------------------------------------------------------
+function confirm(title, msg) {
+  return new Promise(resolve => {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-msg').textContent = msg;
+    document.getElementById('modal-bg').classList.add('open');
+    const yes = document.getElementById('modal-confirm');
+    const no = document.getElementById('modal-cancel');
+    const cleanup = (v) => {
+      document.getElementById('modal-bg').classList.remove('open');
+      yes.replaceWith(yes.cloneNode(true));
+      no.replaceWith(no.cloneNode(true));
+      resolve(v);
+    };
+    document.getElementById('modal-confirm').addEventListener('click', () => cleanup(true));
+    document.getElementById('modal-cancel').addEventListener('click', () => cleanup(false));
+  });
+}
+
+// -- DATE UTILS ---------------------------------------------------------------
+function daysAgo(dateStr) {
+  if (!dateStr) return null;
+  return (Date.now() - new Date(dateStr)) / 86400000;
+}
+
+function fmtDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return (d.getMonth()+1) + '/' + d.getDate();
+}
+
+// -- STATUS LOGIC -------------------------------------------------------------
+function getBucket(c) {
+  const hasClicked = (c.click_count || 0) > 0;
+  const humanOpened = (c.open_count || 0) > 0;
+  const e1days = daysAgo(c.email1_sent_at);
+  const e2days = daysAgo(c.email2_sent_at);
+
+  if (c.status === 'BOUNCED') return 'bounced';
+  if (hasClicked) return 'clicked';
+  if (c.status === 'EMAIL_3_SENT') return 'e3';
+  if (c.status === 'EMAIL_2_SENT' && e2days >= 5) return 'e3due';
+  if (c.status === 'EMAIL_2_SENT') return 'e2';
+  if (c.status === 'EMAIL_1_SENT' && e1days >= 5) return 'e2due';
+  if (c.status === 'EMAIL_1_SENT') return 'e1';
+  if (humanOpened) return 'e1';  // opened but status not updated
+  return 'ready';
+}
+
+function getNextAction(c, bucket) {
+  const e1days = daysAgo(c.email1_sent_at);
+  const e2days = daysAgo(c.email2_sent_at);
+  switch(bucket) {
+    case 'ready':    return { label: 'Send Email 1', cls: 'send-now', days: null };
+    case 'e1': {
+      const left = 5 - e1days;
+      return { label: `E2 in ${Math.ceil(left)}d`, cls: 'waiting', days: left };
+    }
+    case 'e2due':    return { label: 'Send Email 2 Now', cls: 'urgent', days: -1 };
+    case 'e2': {
+      const left = 5 - e2days;
+      return { label: `E3 in ${Math.ceil(left)}d`, cls: 'waiting', days: left };
+    }
+    case 'e3due':    return { label: 'Send Email 3 Now', cls: 'urgent', days: -2 };
+    case 'e3':       return { label: 'Sequence done', cls: 'done', days: 999 };
+    case 'clicked':  return { label: '&#x1F525; High intent', cls: 'send-now', days: -99 };
+    case 'bounced':  return { label: 'Bounced', cls: 'bounce', days: 9999 };
+    default:         return { label: '&mdash;', cls: '', days: 9999 };
+  }
+}
+
+const BADGE = {
+  ready:   ['badge-ready',   'Ready'],
+  e1:      ['badge-e1',      'E1 Sent'],
+  e2due:   ['badge-e2due',   'E2 Due'],
+  e2:      ['badge-e2',      'E2 Sent'],
+  e3due:   ['badge-e3due',   'E3 Due'],
+  e3:      ['badge-e3',      'E3 Sent'],
+  clicked: ['badge-clicked', 'Clicked'],
+  bounced: ['badge-bounced', 'Bounced'],
+};
+
+// -- STATE --------------------------------------------------------------------
+let allContacts = [];
+let sortCol = 'nextDays';
+let sortDir = 1;
+let selectedIds = new Set();
+let dailyGoal = 100;
+let sentToday = 0;
+
+// -- RENDER -------------------------------------------------------------------
+function getFiltered() {
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const statusF = document.getElementById('filter-status').value;
+  const openedF = document.getElementById('filter-opened').value;
+
+  return allContacts.filter(c => {
+    if (q) {
+      const name = ((c.firstname || '') + ' ' + (c.lastname || '')).toLowerCase();
+      const co = (c.company || '').toLowerCase();
+      const em = (c.email || '').toLowerCase();
+      if (!name.includes(q) && !co.includes(q) && !em.includes(q)) return false;
+    }
+    if (statusF && c._bucket !== statusF) return false;
+    if (openedF === 'yes' && !(c.open_count > 0)) return false;
+    if (openedF === 'no' && c.open_count > 0) return false;
+    return true;
+  });
+}
+
+function getSorted(list) {
+  return [...list].sort((a, b) => {
+    let va, vb;
+    switch(sortCol) {
+      case 'name':    va = (a.firstname||'')+(a.lastname||''); vb = (b.firstname||'')+(b.lastname||''); break;
+      case 'company': va = a.company||''; vb = b.company||''; break;
+      case 'status':  va = a._bucket; vb = b._bucket; break;
+      case 'e1':      va = a.email1_sent_at||''; vb = b.email1_sent_at||''; break;
+      case 'e2':      va = a.email2_sent_at||''; vb = b.email2_sent_at||''; break;
+      case 'e3':      va = a.email3_sent_at||''; vb = b.email3_sent_at||''; break;
+      case 'opened':  va = a.open_count||0; vb = b.open_count||0; break;
+      case 'nextDays': va = a._nextDays ?? 9999; vb = b._nextDays ?? 9999; break;
+      default:        va = ''; vb = '';
+    }
+    if (va < vb) return -1 * sortDir;
+    if (va > vb) return 1 * sortDir;
+    return 0;
+  });
+}
+
+function render() {
+  const filtered = getFiltered();
+  const sorted = getSorted(filtered);
+
+  // count chip
+  document.getElementById('count-chip').textContent = sorted.length + ' contact' + (sorted.length !== 1 ? 's' : '');
+
+  const tbody = document.getElementById('tbody');
+
+  if (sorted.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state">
+      <div class="empty-icon">&#x1F50D;</div>
+      <div class="empty-title">No contacts match</div>
+      <div class="empty-msg">Try adjusting the search or filters above.</div>
+    </div></td></tr>`;
+    return;
+  }
+
+  const rows = sorted.map(c => {
+    const [badgeClass, badgeLabel] = BADGE[c._bucket] || ['badge-ready', '?'];
+    const na = getNextAction(c, c._bucket);
+    const opened = (c.open_count||0) > 0;
+    const sel = selectedIds.has(c.id);
+    const name = [c.firstname, c.lastname].filter(Boolean).join(' ') || '&mdash;';
+
+    return `<tr class="${sel ? 'selected' : ''}" data-id="${c.id}">
+      <td class="col-check"><input type="checkbox" class="row-check" data-id="${c.id}" ${sel ? 'checked' : ''}></td>
+      <td class="col-name" title="${name}">${esc(name)}</td>
+      <td class="col-company" title="${c.company||''}">${esc(c.company||'&mdash;')}</td>
+      <td class="col-email" title="${c.email||''}">${esc(c.email||'&mdash;')}</td>
+      <td class="col-status"><span class="badge ${badgeClass}"><span class="badge-dot"></span>${badgeLabel}</span></td>
+      <td class="col-e1">${c.email1_sent_at ? `<span class="date-sent">${fmtDate(c.email1_sent_at)}</span>` : `<span class="date-sent empty">&mdash;</span>`}</td>
+      <td class="col-e2">${c.email2_sent_at ? `<span class="date-sent">${fmtDate(c.email2_sent_at)}</span>` : `<span class="date-sent empty">&mdash;</span>`}</td>
+      <td class="col-e3">${c.email3_sent_at ? `<span class="date-sent">${fmtDate(c.email3_sent_at)}</span>` : `<span class="date-sent empty">&mdash;</span>`}</td>
+      <td class="col-opened">${opened ? `<span class="opened-yes" title="${c.open_count} open(s)">&#x2713;</span>` : `<span class="opened-no">&mdash;</span>`}</td>
+      <td class="col-next"><span class="next-action ${na.cls}">${na.label}</span></td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = rows;
+
+  // reattach row checkbox listeners
+  tbody.querySelectorAll('.row-check').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const id = e.target.dataset.id;
+      if (e.target.checked) selectedIds.add(id);
+      else selectedIds.delete(id);
+      updateSelectionBar();
+      const row = e.target.closest('tr');
+      row.classList.toggle('selected', e.target.checked);
+      syncMasterCheck(filtered);
+    });
+  });
+
+  syncMasterCheck(filtered);
+  updateSelectionBar();
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function syncMasterCheck(filtered) {
+  const master = document.getElementById('master-check');
+  const visible = filtered.map(c => c.id);
+  const allSel = visible.length > 0 && visible.every(id => selectedIds.has(id));
+  master.checked = allSel;
+  master.indeterminate = !allSel && visible.some(id => selectedIds.has(id));
+}
+
+function updateSelectionBar() {
+  const bar = document.getElementById('selection-bar');
+  const n = selectedIds.size;
+  if (n > 0) {
+    bar.classList.remove('hidden');
+    document.getElementById('sel-count').textContent = n + ' selected';
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
+function updateStats() {
+  const total = allContacts.length;
+  const ready = allContacts.filter(c => c._bucket === 'ready').length;
+  const due = allContacts.filter(c => c._bucket === 'e2due' || c._bucket === 'e3due').length;
+  const opened = allContacts.filter(c => (c.open_count||0) > 0).length;
+  const bounced = allContacts.filter(c => c._bucket === 'bounced').length;
+
+  document.getElementById('s-total').textContent = total;
+  document.getElementById('s-ready').textContent = ready;
+  document.getElementById('s-due').textContent = due;
+  document.getElementById('s-opened').textContent = opened;
+  document.getElementById('s-bounced').textContent = bounced;
+
+  const pct = Math.min(100, Math.round((sentToday / dailyGoal) * 100));
+  const fill = document.getElementById('prog-fill');
+  fill.style.width = pct + '%';
+  fill.className = 'send-prog-fill' + (pct >= 100 ? ' over' : pct >= 75 ? ' warn' : '');
+  document.getElementById('prog-sent').textContent = sentToday + ' sent today';
+  document.getElementById('prog-goal').textContent = '/ ' + dailyGoal + ' goal';
+}
+
+// -- SORT HEADERS -------------------------------------------------------------
+document.querySelectorAll('th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const col = th.dataset.col;
+    if (sortCol === col) sortDir *= -1;
+    else { sortCol = col; sortDir = 1; }
+    document.querySelectorAll('th').forEach(t => { t.classList.remove('sort-asc','sort-desc'); });
+    th.classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    render();
+  });
+});
+// default sort indicator
+document.querySelector('[data-col="nextDays"]')?.classList.add('sort-asc');
+
+// -- MASTER CHECKBOX -----------------------------------------------------------
+document.getElementById('master-check').addEventListener('change', e => {
+  const filtered = getFiltered();
+  if (e.target.checked) filtered.forEach(c => selectedIds.add(c.id));
+  else filtered.forEach(c => selectedIds.delete(c.id));
+  render();
+});
+
+// -- SELECT ALL VISIBLE BTN ----------------------------------------------------
+document.getElementById('btn-select-all').addEventListener('click', () => {
+  // select only "ready" contacts visible in current filter
+  const filtered = getFiltered().filter(c => c._bucket === 'ready');
+  if (filtered.length === 0) { toast('No ready contacts visible', 'error'); return; }
+  filtered.forEach(c => selectedIds.add(c.id));
+  render();
+  toast(filtered.length + ' ready contacts selected');
+});
+
+// -- CLEAR SELECTION -----------------------------------------------------------
+document.getElementById('btn-clear-selection').addEventListener('click', () => {
+  selectedIds.clear();
+  render();
+});
+
+// -- SEARCH + FILTER -----------------------------------------------------------
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('filter-status').addEventListener('change', render);
+document.getElementById('filter-opened').addEventListener('change', render);
+
+// -- LOAD PIPELINE DATA --------------------------------------------------------
+async function loadData() {
+  document.getElementById('tbody').innerHTML = '<tr class="loading-row"><td colspan="10">Loading contacts...</td></tr>';
+  try {
+    const data = await api('GET', '/api/pipeline');
+    if (data.error) { toast(data.error, 'error'); return; }
+
+    sentToday = data.sent_today || 0;
+
+    // flatten all buckets into one array
+    const contacts = [];
+    const pipeline = data.pipeline || {};
+    for (const bucket of Object.keys(pipeline)) {
+      for (const c of (pipeline[bucket] || [])) {
+        c._bucket = bucket === 'email1_sent' ? 'e1'
+                  : bucket === 'email2_due'  ? 'e2due'
+                  : bucket === 'email2_sent' ? 'e2'
+                  : bucket === 'email3_due'  ? 'e3due'
+                  : bucket === 'email3_sent' ? 'e3'
+                  : bucket === 'clicked'     ? 'clicked'
+                  : bucket === 'bounced'     ? 'bounced'
+                  : getBucket(c);  // fallback to computed
+        const na = getNextAction(c, c._bucket);
+        c._nextDays = na.days;
+        contacts.push(c);
+      }
+    }
+    allContacts = contacts;
+    updateStats();
+    render();
+  } catch(e) {
+    toast('Failed to load contacts: ' + e.message, 'error');
+    document.getElementById('tbody').innerHTML = '<tr class="loading-row"><td colspan="10">Error loading contacts</td></tr>';
+  }
+}
+
+// -- LOAD CAMPAIGN SETTINGS ----------------------------------------------------
+async function loadSettings() {
+  try {
+    const s = await api('GET', '/api/campaign-settings');
+    if (!s || s.error) return;
+    dailyGoal = s.daily_send_goal || 100;
+    document.getElementById('s-location').value = s.target_location || '';
+    document.getElementById('s-industry').value = s.industry || '';
+    document.getElementById('s-goal').value = s.daily_send_goal || 100;
+    document.getElementById('s-min').value = s.company_size_min || '';
+    document.getElementById('s-max').value = s.company_size_max || '';
+    document.getElementById('s-sub1').value = s.email_subject_1 || '';
+    document.getElementById('s-sub2').value = s.email_subject_2 || '';
+    document.getElementById('s-sub3').value = s.email_subject_3 || '';
+    if (Array.isArray(s.job_titles)) {
+      document.getElementById('s-titles').value = s.job_titles.join('\n');
+    }
+  } catch(e) { /* silently fail */ }
+}
+
+// -- SAVE SETTINGS -------------------------------------------------------------
+document.getElementById('btn-save-settings').addEventListener('click', async () => {
+  const titles = document.getElementById('s-titles').value
+    .split('\n').map(t => t.trim()).filter(Boolean);
+  const body = {
+    target_location:  document.getElementById('s-location').value.trim(),
+    industry:         document.getElementById('s-industry').value.trim(),
+    job_titles:       titles,
+    company_size_min: parseInt(document.getElementById('s-min').value) || 1,
+    company_size_max: parseInt(document.getElementById('s-max').value) || 200,
+    daily_send_goal:  parseInt(document.getElementById('s-goal').value) || 100,
+    email_subject_1:  document.getElementById('s-sub1').value.trim(),
+    email_subject_2:  document.getElementById('s-sub2').value.trim(),
+    email_subject_3:  document.getElementById('s-sub3').value.trim(),
+  };
+  const btn = document.getElementById('btn-save-settings');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await api('POST', '/api/campaign-settings', body);
+    if (r.success) {
+      dailyGoal = body.daily_send_goal;
+      updateStats();
+      toast('Settings saved', 'success');
+    } else {
+      toast(r.error || 'Save failed', 'error');
+    }
+  } catch(e) { toast('Save failed: ' + e.message, 'error'); }
+  btn.disabled = false; btn.textContent = 'Save Settings';
+});
+
+// -- SEND EMAIL 1 TO SELECTED --------------------------------------------------
+document.getElementById('btn-send-selected').addEventListener('click', async () => {
+  if (selectedIds.size === 0) return;
+  const ids = [...selectedIds];
+  // Only allow ready contacts
+  const readyIds = ids.filter(id => {
+    const c = allContacts.find(c => c.id === id);
+    return c && c._bucket === 'ready';
+  });
+  const nonReady = ids.length - readyIds.length;
+  if (readyIds.length === 0) { toast('Selected contacts already have Email 1 sent', 'error'); return; }
+  const msg = `Send Email 1 to ${readyIds.length} contact(s)?` + (nonReady > 0 ? ` (${nonReady} skipped &mdash; already sent)` : '');
+  const ok = await confirm('Send Emails', msg);
+  if (!ok) return;
+  toast('Sending ' + readyIds.length + ' emails...');
+  // Delegate to server &mdash; this reuses the same sendEmail action the dashboard uses
+  let sent = 0, failed = 0;
+  for (const id of readyIds) {
+    try {
+      const r = await api('POST', '/api/action', { action: 'sendEmail', contactId: id, emailNum: 1 });
+      if (r.success) sent++;
+      else failed++;
+    } catch { failed++; }
+  }
+  selectedIds.clear();
+  if (sent > 0) toast(sent + ' email(s) sent!', 'success');
+  if (failed > 0) toast(failed + ' failed to send', 'error');
+  setTimeout(loadData, 1500);
+});
+
+// -- BOUNCE CHECK --------------------------------------------------------------
+document.getElementById('btn-bounce-check').addEventListener('click', async () => {
+  const ok = await confirm('Check Bounces', 'This will scan your inbox for undeliverable emails and mark those contacts as bounced.');
+  if (!ok) return;
+  toast('Checking inbox for bounces...');
+  try {
+    const creds = await api('GET', '/api/user-credentials');
+    const r = await api('POST', '/api/bounce-check', creds);
+    if (r.error) { toast(r.error, 'error'); return; }
+    toast(`Found ${r.bounced?.length || 0} bounced emails, marked ${r.marked || 0} contacts`, r.marked > 0 ? 'success' : '');
+    if (r.marked > 0) setTimeout(loadData, 1000);
+  } catch(e) { toast('Bounce check failed: ' + e.message, 'error'); }
+});
+
+// -- REFRESH -------------------------------------------------------------------
+document.getElementById('btn-refresh').addEventListener('click', () => {
+  selectedIds.clear();
+  loadData();
+  toast('Refreshing...');
+});
+
+// -- EXPORT CSV ----------------------------------------------------------------
+document.getElementById('btn-export').addEventListener('click', () => {
+  const headers = ['First Name','Last Name','Company','Email','Status','E1 Sent','E2 Sent','E3 Sent','Opened','Open Count'];
+  const rows = allContacts.map(c => [
+    c.firstname||'', c.lastname||'', c.company||'', c.email||'',
+    c._bucket, c.email1_sent_at||'', c.email2_sent_at||'', c.email3_sent_at||'',
+    (c.open_count||0) > 0 ? 'Yes' : 'No', c.open_count||0
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'mozok-contacts-' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  toast('CSV exported');
+});
+
+// -- LOGOUT --------------------------------------------------------------------
+document.getElementById('btn-logout').addEventListener('click', () => {
+  localStorage.removeItem('mozok_token');
+  localStorage.removeItem('mozok_user_email');
+  window.location.href = BASE_URL;
+});
+
+// -- INIT ----------------------------------------------------------------------
+(async () => {
+  const ok = await ensureAuth();
+  if (!ok) return;
+  await Promise.all([loadData(), loadSettings()]);
+})();
+</script>
+</body>
+</html>
