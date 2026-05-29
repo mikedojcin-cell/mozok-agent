@@ -288,7 +288,17 @@ app.post('/api/graph', async (req, res) => {
   }
 
   if (action === 'sendEmail') {
-    const { to, subject, body: emailBody, contactId } = req.body;
+    const { to, body: emailBody, contactId } = req.body;
+    const emailNum = req.body.emailNum || 1;
+    const [_sRows, _cRows] = await Promise.all([
+      supabase('GET', '/rest/v1/campaign_settings?id=eq.1&select=email_subject_1,email_subject_2,email_subject_3'),
+      contactId ? supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=firstname,company`) : Promise.resolve([])
+    ]);
+    const _s = _sRows[0] || {}, _c = _cRows[0] || {};
+    const subject = (_s[`email_subject_${emailNum}`] || req.body.subject || 'Following up')
+      .replace(/\{\{firstname\}\}/gi, _c.firstname || '')
+      .replace(/\{\{company\}\}/gi, _c.company || '')
+      .trim();
     try {
       const tokenRes = await getToken(tenantId, clientId, clientSecret);
       if (!tokenRes.access_token) return res.json({ error: '[' + (tokenRes.error||'token_error') + '] ' + (tokenRes.error_description || 'Token failed') });
