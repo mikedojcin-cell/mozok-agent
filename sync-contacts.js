@@ -167,114 +167,224 @@ function findNextConfig(state) {
   return 0;
 }
 
+// ─── CUSTOM CONFIG FROM APP SETTINGS (added 2026-07-25) ─────────────────────────
+// If the Settings screen in the app (campaign_settings.target_location) has a
+// value, that OVERRIDES the hardcoded SEARCH_CONFIGS rotation above entirely —
+// every sync run pulls only from the location(s)/titles you set there, instead
+// of cycling through the fixed state list. Leave target_location blank in
+// Settings to keep using the default hardcoded rotation, unchanged.
+//
+// Format expected in Settings:
+//   target_location: one or more "City/Region, Country" values separated by ';'
+//                     e.g. "Ontario, Canada; Michigan, United States"
+//   job_titles:       comma-separated job titles, e.g. "Owner, President, CEO"
+//                     (optional — if blank, uses the same Owner+Manager title
+//                     list the default rotation uses)
+
+async function getCampaignSettings() {
+  const res = await supabaseRequest('GET', '/rest/v1/campaign_settings?id=eq.1&select=target_location,job_titles');
+  if (res.status === 200 && Array.isArray(res.body) && res.body.length > 0) {
+    return res.body[0];
+  }
+  return {};
+}
+
+function parseLocations(str) {
+  if (!str || !str.trim()) return null;
+  const parts = str.split(';').map(s => s.trim()).filter(Boolean);
+  return parts.length ? parts : null;
+}
+
+function parseTitles(str) {
+  if (!str || !str.trim()) return null;
+  const parts = str.split(',').map(s => s.trim()).filter(Boolean);
+  return parts.length ? parts : null;
+}
+
+async function getCustomState() {
+  const res = await supabaseRequest('GET', '/rest/v1/sync_state?key=eq.apollo_custom_page&select=value');
+  if (res.status === 200 && res.body && res.body.length > 0) {
+    return JSON.parse(res.body[0].value);
+  }
+  return { page: 1 };
+}
+
+async function saveCustomState(state) {
+  await supabaseRequest('POST', '/rest/v1/sync_state?on_conflict=key', [
+    { key: 'apollo_custom_page', value: JSON.stringify(state) }
+  ]);
+}
+
+async function runSearch(config, apolloParams) {
+  console.log(`Fetching: ${config.label} | Page: ${apolloParams.page}`);
+  const apolloData = await apolloRequest('/v1/mixed_people/api_search', apolloParams);
+  return apolloData;
+}
+
+async function persistContacts(people) {
+  if (!people || !people.length) return 0;
+  console.log(`Fetched ${people.length} contacts. Enriching emails...`);
+
+  const enriched = [];
+  for (let i = 0; i < people.length; i += 10) {
+    const batch = people.slice(i, i + 10);
+    const matches = await enrichBatch(batch);
+    enriched.push(...matches);
+    console.log(`Enriched batch ${Math.floor(i/10)+1}: ${matches.length} matches`);
+  }
+
+  const emailMap = {};
+  for (const m of enriched) {
+    if (m.id && m.email) emailMap[m.id] = m.email;
+  }
+
+  const contacts = people
+    .filter(p => emailMap[p.id])
+    .map(p => ({
+      apollo_id: p.id,
+      firstname: p.first_name || '',
+      lastname: p.last_name || '',
+      email: emailMap[p.id],
+      company: p.organization ? p.organization.name : '',
+      phone: p.phone_numbers && p.phone_numbers[0] ? p.phone_numbers[0].raw_number : '',
+      linkedin: p.linkedin_url || '',
+      city: p.city || '',
+      state: p.state || '',
+      country: p.country || '',
+      status: 'NEW',
+      last_synced: new Date().toISOString()
+    }));
+
+  console.log(`${contacts.length} contacts with verified emails.`);
+
+  const result = await supabaseRequest('POST', '/rest/v1/contacts?on_conflict=apollo_id', contacts);
+  console.log(`Supabase status: ${result.status}`);
+
+  if (result.status === 200 || result.status === 201) {
+    console.log(`✅ Synced ${contacts.length} contacts to Supabase.`);
+  } else {
+    console.log(`❌ Supabase error: ${JSON.stringify(result.body).substring(0, 300)}`);
+  }
+
+  return contacts.length;
+}
+
+async function syncCustom(locations, titles) {
+  const config = { label: `Settings: ${locations.join(' | ')}`, locations, titles };
+  let state = await getCustomState();
+  if (!state.page) state.page = 1;
+
+  console.log(`Custom config active (from app Settings): ${config.label} | Page: ${state.page}`);
+
+  const apolloData = await runSearch(config, {
+    api_key: APOLLO_KEY,
+    person_titles: config.titles,
+    person_locations: config.locations,
+    organization_num_employees_ranges: ['1,10', '11,50', '51,200'],
+    contact_email_status: ['verified', 'likely to engage'],
+    page: state.page,
+    per_page: 100
+  });
+
+  if (!apolloData.people || apolloData.people.length === 0) {
+    console.log(`⚠ No contacts found on page ${state.page} for this Settings target — wrapping back to page 1.`);
+    state.page = 1;
+    await saveCustomState(state);
+    return;
+  }
+
+  await persistContacts(apolloData.people);
+
+  if (apolloData.people.length < 50) {
+    console.log(`Low results (${apolloData.people.length}) — wrapping back to page 1 next run.`);
+    state.page = 1;
+  } else {
+    state.page += 1;
+  }
+  await saveCustomState(state);
+  console.log(`Next run: page ${state.page}`);
+}
+
+async function syncDefault() {
+  let state = await getState();
+  if (!state.exhausted) state.exhausted = [];
+
+  const total = SEARCH_CONFIGS.length;
+  const activeCount = total - state.exhausted.length;
+  console.log(`Active configs: ${activeCount}/${total} | Exhausted: ${state.exhausted.length}`);
+
+  // If all exhausted — reset
+  if (state.exhausted.length >= total) {
+    console.log('All configs exhausted — resetting all.');
+    state.exhausted = [];
+    state.config_index = 0;
+    state.page = 1;
+  }
+
+  const config = SEARCH_CONFIGS[state.config_index % total];
+  console.log(`Config ${state.config_index + 1}/${total}: ${config.label} | Page: ${state.page}`);
+
+  const apolloData = await runSearch(config, {
+    api_key: APOLLO_KEY,
+    person_titles: config.titles,
+    person_locations: config.locations,
+    organization_num_employees_ranges: ['1,10', '11,50', '51,200'],
+    contact_email_status: ['verified', 'likely to engage'],
+    page: state.page,
+    per_page: 100
+  });
+
+  if (!apolloData.people || apolloData.people.length === 0) {
+    // Mark this config as exhausted
+    console.log(`⚠ No contacts found — marking "${config.label}" as exhausted.`);
+    if (!state.exhausted.includes(state.config_index % total)) {
+      state.exhausted.push(state.config_index % total);
+    }
+    const nextIdx = findNextConfig({ ...state, config_index: (state.config_index + 1) % total });
+    state.config_index = nextIdx;
+    state.page = 1;
+    await saveState(state);
+    const next = SEARCH_CONFIGS[nextIdx];
+    console.log(`Next run: ${next.label}`);
+    return;
+  }
+
+  await persistContacts(apolloData.people);
+
+  // Move to next page or next config if low results
+  if (apolloData.people.length < 50) {
+    console.log(`Low results (${apolloData.people.length}) — moving to next config.`);
+    if (!state.exhausted.includes(state.config_index % total)) {
+      state.exhausted.push(state.config_index % total);
+    }
+    const nextIdx = findNextConfig({ ...state, config_index: (state.config_index + 1) % total });
+    state.config_index = nextIdx;
+    state.page = 1;
+  } else {
+    state.page += 1;
+  }
+
+  await saveState(state);
+  const next = SEARCH_CONFIGS[state.config_index % total];
+  console.log(`Next run: ${next.label}, page ${state.page}`);
+  console.log(`Exhausted configs (${state.exhausted.length}): ${state.exhausted.map(i => SEARCH_CONFIGS[i].label).join(', ') || 'none'}`);
+}
+
 async function syncContacts() {
   console.log('Starting Apollo → Supabase sync...');
 
   try {
-    let state = await getState();
-    if (!state.exhausted) state.exhausted = [];
+    const settings = await getCampaignSettings();
+    const customLocations = parseLocations(settings.target_location);
 
-    const total = SEARCH_CONFIGS.length;
-    const activeCount = total - state.exhausted.length;
-    console.log(`Active configs: ${activeCount}/${total} | Exhausted: ${state.exhausted.length}`);
-
-    // If all exhausted — reset
-    if (state.exhausted.length >= total) {
-      console.log('All configs exhausted — resetting all.');
-      state.exhausted = [];
-      state.config_index = 0;
-      state.page = 1;
-    }
-
-    const config = SEARCH_CONFIGS[state.config_index % total];
-    console.log(`Config ${state.config_index + 1}/${total}: ${config.label} | Page: ${state.page}`);
-
-    const apolloData = await apolloRequest('/v1/mixed_people/api_search', {
-      api_key: APOLLO_KEY,
-      person_titles: config.titles,
-      person_locations: config.locations,
-      organization_num_employees_ranges: ['1,10', '11,50', '51,200'],
-      contact_email_status: ['verified', 'likely to engage'],
-      page: state.page,
-      per_page: 100
-    });
-
-    if (!apolloData.people || apolloData.people.length === 0) {
-      // Mark this config as exhausted
-      console.log(`⚠ No contacts found — marking "${config.label}" as exhausted.`);
-      if (!state.exhausted.includes(state.config_index % total)) {
-        state.exhausted.push(state.config_index % total);
-      }
-      const nextIdx = findNextConfig({ ...state, config_index: (state.config_index + 1) % total });
-      state.config_index = nextIdx;
-      state.page = 1;
-      await saveState(state);
-      const next = SEARCH_CONFIGS[nextIdx];
-      console.log(`Next run: ${next.label}`);
-      return;
-    }
-
-    console.log(`Fetched ${apolloData.people.length} contacts. Enriching emails...`);
-
-    const enriched = [];
-    for (let i = 0; i < apolloData.people.length; i += 10) {
-      const batch = apolloData.people.slice(i, i + 10);
-      const matches = await enrichBatch(batch);
-      enriched.push(...matches);
-      console.log(`Enriched batch ${Math.floor(i/10)+1}: ${matches.length} matches`);
-    }
-
-    const emailMap = {};
-    for (const m of enriched) {
-      if (m.id && m.email) emailMap[m.id] = m.email;
-    }
-
-    const contacts = apolloData.people
-      .filter(p => emailMap[p.id])
-      .map(p => ({
-        apollo_id: p.id,
-        firstname: p.first_name || '',
-        lastname: p.last_name || '',
-        email: emailMap[p.id],
-        company: p.organization ? p.organization.name : '',
-        phone: p.phone_numbers && p.phone_numbers[0] ? p.phone_numbers[0].raw_number : '',
-        linkedin: p.linkedin_url || '',
-        city: p.city || '',
-        state: p.state || '',
-        country: p.country || '',
-        status: 'NEW',
-        last_synced: new Date().toISOString()
-      }));
-
-    console.log(`${contacts.length} contacts with verified emails.`);
-
-    const result = await supabaseRequest('POST', '/rest/v1/contacts?on_conflict=apollo_id', contacts);
-    console.log(`Supabase status: ${result.status}`);
-
-    if (result.status === 200 || result.status === 201) {
-      console.log(`✅ Synced ${contacts.length} contacts to Supabase.`);
+    if (customLocations) {
+      const customTitles = parseTitles(settings.job_titles) || [...OWNER_TITLES, ...MANAGER_TITLES];
+      console.log(`Settings target_location is set — using custom config instead of default rotation.`);
+      await syncCustom(customLocations, customTitles);
     } else {
-      console.log(`❌ Supabase error: ${JSON.stringify(result.body).substring(0, 300)}`);
+      console.log(`Settings target_location is blank — using default hardcoded rotation.`);
+      await syncDefault();
     }
-
-    // Move to next page or next config if low results
-    if (apolloData.people.length < 50) {
-      console.log(`Low results (${apolloData.people.length}) — moving to next config.`);
-      if (!state.exhausted.includes(state.config_index % total)) {
-        state.exhausted.push(state.config_index % total);
-      }
-      const nextIdx = findNextConfig({ ...state, config_index: (state.config_index + 1) % total });
-      state.config_index = nextIdx;
-      state.page = 1;
-    } else {
-      state.page += 1;
-    }
-
-    await saveState(state);
-    const next = SEARCH_CONFIGS[state.config_index % total];
-    console.log(`Next run: ${next.label}, page ${state.page}`);
-    console.log(`Exhausted configs (${state.exhausted.length}): ${state.exhausted.map(i => SEARCH_CONFIGS[i].label).join(', ') || 'none'}`);
-
   } catch (err) {
     console.error('❌ Sync failed:', err.message);
     process.exit(1);
