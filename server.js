@@ -15,7 +15,7 @@ const BASE_URL = 'https://app.mozok.co';
 
 
 
-// âââ AUTH MIDDLEWARE ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── AUTH MIDDLEWARE ────────────────────────────────────────────────────────────
 
 async function requireAuth(req, res, next) {
   const auth = req.headers['authorization'];
@@ -58,7 +58,7 @@ app.use('/api/graph', requireAuth);
 app.use('/api/meta', requireAuth);
 app.use('/api/generate-post', requireAuth);
 
-// âââ HELPERS ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── HELPERS ────────────────────────────────────────────────────────────────────
 
 async function supabase(method, endpoint, body) {
   return new Promise((resolve, reject) => {
@@ -141,7 +141,7 @@ async function metaGet(url) {
   });
 }
 
-// âââ EMAIL CLICK TRACKING (public) âââââââââââââââââââââââââââââââââââââââââââ
+// ─── EMAIL CLICK TRACKING (public) ──────────────────────────────────────────────
 
 app.get('/track/click/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -164,7 +164,7 @@ app.get('/track/click/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
-// âââ CLEAN VISIT REDIRECT (public) âââââââââââââââââââââââââââââââââââââââââââ
+// ─── CLEAN VISIT REDIRECT (public) ──────────────────────────────────────────────
 
 app.get('/visit/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -187,12 +187,19 @@ app.get('/visit/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
-// âââ EMAIL OPEN TRACKING (public) ââââââââââââââââââââââââââââââââââââââââââââ
+// ─── EMAIL OPEN TRACKING (public) ───────────────────────────────────────────────
 
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
-
-const BOT_UA_PATTERNS = ['YahooMailProxy','Synapse','y!j-asr','msnbot','bingbot','MS Exchange','Microsoft Office','curl','python-requests','okhttp','Go-http-client','GoogleImageProxy','Googlebot','Google-Read-Aloud','Cloudflare','Barracuda','Proofpoint','Mimecast','IronPort','SpamAssassin','Symantec','Trend Micro','Wget','libwww','Jakarta','Java/','Apache-HttpClient'];
+// NOTE: GoogleImageProxy, YahooMailProxy, "MS Exchange" and "Microsoft Office" were
+// REMOVED from this list on 2026-07-25. Those strings are what Gmail/Yahoo/Outlook's
+// own image-proxy infrastructure sends when a REAL HUMAN opens the email — proxying
+// images through the provider's own servers (to hide the recipient's IP/UA) is now
+// standard privacy behavior at Google, Yahoo, and Microsoft. Blocking those patterns
+// was silently discarding real opens from anyone on Gmail or Outlook/O365 — i.e. most
+// of a B2B prospect list. Left in place: dedicated corporate security-scanner and
+// generic-HTTP-library signatures, which are unambiguous automated fetches.
+const BOT_UA_PATTERNS = ['Synapse','msnbot','bingbot','curl','python-requests','okhttp','Go-http-client','Googlebot','Google-Read-Aloud','Cloudflare','Barracuda','Proofpoint','Mimecast','IronPort','SpamAssassin','Symantec','Trend Micro','Wget','libwww','Jakarta','Java/','Apache-HttpClient'];
 function isBotUA(ua){if(!ua||ua.trim()==='')return true;const l=ua.toLowerCase();return BOT_UA_PATTERNS.some(p=>l.includes(p.toLowerCase()));}
 app.get('/track/open/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -211,7 +218,7 @@ app.get('/track/open/:contactId', async (req, res) => {
   res.end(PIXEL);
 });
 
-// âââ EMAIL PIPELINE API (protected) ââââââââââââââââââââââââââââââââââââââââââ
+// ─── EMAIL PIPELINE API (protected) ─────────────────────────────────────────────
 
 app.get('/api/pipeline', async (req, res) => {
   try {
@@ -246,15 +253,15 @@ else if (c.human_opened) pipeline.email1_sent.push(c);
   } catch(e){res.json({error:e.message});}
 });
 
-// âââ GRAPH / SUPABASE API (protected) ââââââââââââââââââââââââââââââââââââââââ
+// ─── GRAPH / SUPABASE API (protected) ───────────────────────────────────────────
 
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
 
   if (action === 'getContacts') {
-    const { status } = req.body;
+    const { status, offset = 0 } = req.body;  // ← offset added for pagination
     try {
-      const data = await supabase('GET', `/rest/v1/contacts?status=eq.${status}&email=neq.&order=created_at.desc&limit=100`);
+      const data = await supabase('GET', `/rest/v1/contacts?status=eq.${status}&email=neq.&order=created_at.desc&limit=100&offset=${offset}`);
       return res.json({ results: Array.isArray(data) ? data : [], total: Array.isArray(data) ? data.length : 0 });
     } catch(e) { return res.json({ error: e.message }); }
   }
@@ -290,6 +297,7 @@ app.post('/api/graph', async (req, res) => {
   if (action === 'sendEmail') {
     const { to, body: emailBody, contactId } = req.body;
     const emailNum = req.body.emailNum || 1;
+    if (!contactId) console.warn(`[sendEmail] WARNING: sending to ${to} with no contactId — this email will have NO open/click tracking pixel and cannot be attributed to a contact.`);
     const [_sRows, _cRows] = await Promise.all([
       supabase('GET', '/rest/v1/campaign_settings?id=eq.1&select=email_subject_1,email_subject_2,email_subject_3'),
       contactId ? supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=firstname,company`) : Promise.resolve([])
@@ -380,7 +388,7 @@ app.post('/api/graph', async (req, res) => {
   }
 });
 
-// âââ META OAUTH âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── META OAUTH ─────────────────────────────────────────────────────────────────
 
 app.get('/auth/meta', (req, res) => {
   const { clientId } = req.query;
@@ -403,14 +411,14 @@ app.get('/auth/meta/callback', async (req, res) => {
   }
 });
 
-// âââ META INSIGHTS (protected) âââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── META INSIGHTS (protected) ──────────────────────────────────────────────────
 
 app.get('/api/meta/pages/:clientId', async (req, res) => {
   const { clientId } = req.params;
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token â client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token – client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     res.json({ pages: pages.data || [] });
   } catch(e) {
@@ -423,7 +431,7 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token â client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token – client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     if (!pages.data || !pages.data.length) return res.json({ error: 'No pages found' });
     const page = pages.data[0];
@@ -439,7 +447,7 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   }
 });
 
-// âââ CONTACT FORM (public) ââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── CONTACT FORM (public) ───────────────────────────────────────────────────────
 
 app.post('/api/contact', async (req, res) => {
   const { name, email, message } = req.body;
@@ -472,7 +480,7 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// âââ CLAUDE POST GENERATOR (protected) âââââââââââââââââââââââââââââââââââââââ
+// ─── CLAUDE POST GENERATOR (protected) ──────────────────────────────────────────
 
 app.post('/api/generate-post', async (req, res) => {
   const { prompt } = req.body;
@@ -513,7 +521,7 @@ app.post('/api/generate-post', async (req, res) => {
   }
 });
 
-// âââ CATCH ALL ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// ─── CATCH ALL ───────────────────────────────────────────────────────────────────
 
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
@@ -548,5 +556,10 @@ app.post('/api/campaign-settings', requireAuth, async (req, res) => {
   const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
   try{await supabase('POST','/rest/v1/campaign_settings',{id:1,target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()},{'Prefer':'resolution=merge-duplicates'});res.json({success:true});}catch(e){res.json({error:e.message});}
 });
+
+// Cheap, no-auth, no-DB endpoint for external uptime pings — hitting this keeps the
+// Render free-tier dyno warm so tracking-pixel requests don't get dropped by the
+// recipient's mail client while the server is cold-starting (see 2026-07-25 fix notes).
+app.get('/health', (req, res) => res.status(200).send('ok'));
 
 app.listen(PORT, () => console.log(`Mozok Agent running on port ${PORT}`));
