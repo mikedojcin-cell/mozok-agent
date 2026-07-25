@@ -630,17 +630,28 @@ app.post('/api/campaign-settings', requireAuth, async (req, res) => {
   // whatever JSON body Supabase/PostgREST sent back, even for 400/403/etc, so
   // a bad column name or permission issue would silently report success:true
   // here. Now checking the actual response shape before claiming success.
-  // 2026-07-25: campaign_settings.target_location and .job_titles are Postgres
-  // array columns, not plain text — sending them as delimited strings (even an
-  // empty string) triggers "malformed array literal" from PostgREST. Convert
-  // to real arrays (or null when empty) before writing.
+  // 2026-07-25: campaign_settings.job_titles is a Postgres array column —
+  // sending it as a delimited string (even an empty string) triggers "malformed
+  // array literal" from PostgREST. Convert to a real array (or null when empty).
+  // target_location, by contrast, IS plain text — the array-literal error we hit
+  // earlier came specifically from job_titles being blank, not target_location.
+  // Sending target_location as an array too (an earlier version of this fix did)
+  // silently "succeeded" but stored the JSON-stringified array as literal text,
+  // e.g. '["Ontario, Canada"]' with visible brackets/quotes — caught by testing
+  // an actual save + reload, not by the error response, since PostgREST didn't
+  // reject it. Confirmed via GET /api/campaign-settings: target_location comes
+  // back as typeof 'string', job_titles as a real array.
   function toArrayOrNull(str, sep) {
     if (typeof str !== 'string' || !str.trim()) return null;
     const arr = str.split(sep).map(s => s.trim()).filter(Boolean);
     return arr.length ? arr : null;
   }
+  function toTextOrNull(str) {
+    if (typeof str !== 'string' || !str.trim()) return null;
+    return str.trim();
+  }
   try{
-    const payload = {target_location: toArrayOrNull(target_location, ';'), industry, job_titles: toArrayOrNull(job_titles, ','), company_size_min, company_size_max, daily_send_goal: daily_send_goal||100, email_subject_1, email_subject_2, email_subject_3, updated_at: new Date().toISOString()};
+    const payload = {target_location: toTextOrNull(target_location), industry, job_titles: toArrayOrNull(job_titles, ','), company_size_min, company_size_max, daily_send_goal: daily_send_goal||100, email_subject_1, email_subject_2, email_subject_3, updated_at: new Date().toISOString()};
     const existing = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=id');
     if (!Array.isArray(existing)) {
       return res.json({ error: 'Supabase read failed: ' + JSON.stringify(existing).slice(0, 300) });
