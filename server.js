@@ -521,6 +521,12 @@ app.post('/api/generate-post', async (req, res) => {
   }
 });
 
+// Cheap, no-auth, no-DB endpoint for external uptime pings — hitting this keeps the
+// Render free-tier dyno warm so tracking-pixel requests don't get dropped by the
+// recipient's mail client while the server is cold-starting (see 2026-07-25 fix notes).
+// MUST be registered before the '*' catch-all below, or the catch-all swallows it first.
+app.get('/health', (req, res) => res.status(200).send('ok'));
+
 // ─── CATCH ALL ───────────────────────────────────────────────────────────────────
 
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
@@ -556,10 +562,5 @@ app.post('/api/campaign-settings', requireAuth, async (req, res) => {
   const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
   try{await supabase('POST','/rest/v1/campaign_settings',{id:1,target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()},{'Prefer':'resolution=merge-duplicates'});res.json({success:true});}catch(e){res.json({error:e.message});}
 });
-
-// Cheap, no-auth, no-DB endpoint for external uptime pings — hitting this keeps the
-// Render free-tier dyno warm so tracking-pixel requests don't get dropped by the
-// recipient's mail client while the server is cold-starting (see 2026-07-25 fix notes).
-app.get('/health', (req, res) => res.status(200).send('ok'));
 
 app.listen(PORT, () => console.log(`Mozok Agent running on port ${PORT}`));
