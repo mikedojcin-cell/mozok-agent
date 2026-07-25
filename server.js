@@ -608,34 +608,12 @@ app.post('/api/generate-post', async (req, res) => {
 // MUST be registered before the '*' catch-all below, or the catch-all swallows it first.
 app.get('/health', (req, res) => res.status(200).send('ok'));
 
-// ─── CATCH ALL ───────────────────────────────────────────────────────────────────
-
-app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
-app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
-app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
-const PORT = process.env.PORT || 3000;
-// BOUNCE CHECK
-app.post('/api/bounce-check', requireAuth, async (req, res) => {
-  const { tenantId, clientId, clientSecret, userEmail } = req.body;
-  if(!tenantId||!clientId||!clientSecret||!userEmail)return res.json({error:'Missing credentials'});
-  try {
-    const tokenRes=await getToken(tenantId,clientId,clientSecret);
-    if(!tokenRes.access_token)return res.json({error:'Token failed'});
-    const token=tokenRes.access_token;
-    const filter=encodeURIComponent("contains(subject,'Undeliverable') or contains(subject,'Delivery has failed') or contains(subject,'Mail Delivery Subsystem')");
-    const ndrRes=await graphCall(token,'GET',`/v1.0/users/${userEmail}/messages?$filter=${filter}&$top=50&$select=subject,bodyPreview`,null);
-    if(!ndrRes?.data?.value)return res.json({bounced:[],checked:0});
-    const bouncedEmails=[];
-    for(const msg of ndrRes.data.value){const m=((msg.subject||'')+(msg.bodyPreview||'')).match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g)||[];m.forEach(e=>{if(!e.includes('postmaster')&&!e.includes('mailer-daemon')&&e.toLowerCase()!==userEmail.toLowerCase())bouncedEmails.push(e.toLowerCase());});}
-    const unique=[...new Set(bouncedEmails)];
-    let marked=0;
-    for(const email of unique){const ex=await supabase('GET',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}&select=id,status`);if(ex.length>0&&ex[0].status!=='BOUNCED'){await supabase('PATCH',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}`,{status:'BOUNCED',bounced_at:new Date().toISOString()});marked++;}}
-    res.json({bounced:unique,checked:ndrRes.data.value.length,marked});
-  }catch(e){res.json({error:e.message});}
-});
 // CAMPAIGN SETTINGS
+// MUST be registered before the '*' catch-all below (same bug as /health above) —
+// GET /api/campaign-settings was being silently swallowed by the catch-all and
+// returning index.html's HTML instead of JSON. settings.html's fetch().json()
+// would throw parsing '<script>...' as JSON, so the page always looked blank
+// even after a successful save. Moved here 2026-07-25.
 app.get('/api/campaign-settings', requireAuth, async (req, res) => {
   try{const rows=await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=*');res.json(rows[0]||{});}catch(e){res.json({error:e.message});}
 });
@@ -681,6 +659,34 @@ app.post('/api/campaign-settings', requireAuth, async (req, res) => {
     }
     const verify = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=target_location,job_titles');
     res.json({success:true, saved: verify[0] || null});
+  }catch(e){res.json({error:e.message});}
+});
+
+// ─── CATCH ALL ───────────────────────────────────────────────────────────────────
+
+app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
+app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+const PORT = process.env.PORT || 3000;
+// BOUNCE CHECK
+app.post('/api/bounce-check', requireAuth, async (req, res) => {
+  const { tenantId, clientId, clientSecret, userEmail } = req.body;
+  if(!tenantId||!clientId||!clientSecret||!userEmail)return res.json({error:'Missing credentials'});
+  try {
+    const tokenRes=await getToken(tenantId,clientId,clientSecret);
+    if(!tokenRes.access_token)return res.json({error:'Token failed'});
+    const token=tokenRes.access_token;
+    const filter=encodeURIComponent("contains(subject,'Undeliverable') or contains(subject,'Delivery has failed') or contains(subject,'Mail Delivery Subsystem')");
+    const ndrRes=await graphCall(token,'GET',`/v1.0/users/${userEmail}/messages?$filter=${filter}&$top=50&$select=subject,bodyPreview`,null);
+    if(!ndrRes?.data?.value)return res.json({bounced:[],checked:0});
+    const bouncedEmails=[];
+    for(const msg of ndrRes.data.value){const m=((msg.subject||'')+(msg.bodyPreview||'')).match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g)||[];m.forEach(e=>{if(!e.includes('postmaster')&&!e.includes('mailer-daemon')&&e.toLowerCase()!==userEmail.toLowerCase())bouncedEmails.push(e.toLowerCase());});}
+    const unique=[...new Set(bouncedEmails)];
+    let marked=0;
+    for(const email of unique){const ex=await supabase('GET',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}&select=id,status`);if(ex.length>0&&ex[0].status!=='BOUNCED'){await supabase('PATCH',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}`,{status:'BOUNCED',bounced_at:new Date().toISOString()});marked++;}}
+    res.json({bounced:unique,checked:ndrRes.data.value.length,marked});
   }catch(e){res.json({error:e.message});}
 });
 
