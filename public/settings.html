@@ -107,14 +107,23 @@ window.fetch=function(u,o){
 </div>
 
 <script>
+// target_location / job_titles are Postgres array columns — Supabase returns
+// real arrays, so join them back into the semicolon/comma display format.
+function toDisplayString(val, sep){
+  if (Array.isArray(val)) return val.join(sep);
+  return val || '';
+}
+
 async function loadSettings(){
   try {
     var res = await fetch('/api/campaign-settings');
     var data = await res.json();
     if (data.error) { showBanner(false, 'Could not load current settings: ' + data.error); return; }
-    document.getElementById('targetLocation').value = data.target_location || '';
-    document.getElementById('jobTitles').value = data.job_titles || '';
-    showBanner(!!(data.target_location && data.target_location.trim()), data.target_location);
+    var locDisplay = toDisplayString(data.target_location, '; ');
+    var titlesDisplay = toDisplayString(data.job_titles, ', ');
+    document.getElementById('targetLocation').value = locDisplay;
+    document.getElementById('jobTitles').value = titlesDisplay;
+    showBanner(!!locDisplay.trim(), locDisplay);
   } catch(e) {
     showBanner(false, 'Could not load current settings: ' + e.message);
   }
