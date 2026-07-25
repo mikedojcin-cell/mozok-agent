@@ -98,27 +98,13 @@ window.fetch=function(u,o){
   <h1>Tracking test</h1>
   <div class="sub">Send a real, tracked test email to any inbox you control, then open it from that inbox (not a preview pane) and watch below for the open event. Test sends are tagged separately and never show up in your real pipeline or contact counts.</div>
 
-  <div class="card">
-    <h3>1. Connect (same credentials as the main app)</h3>
-    <div class="warn">Browser autofill can misfire on these fields and fill in saved login credentials instead. Check every field is actually correct before sending — the Tenant ID should be a GUID or your domain, never an email or password.</div>
-    <form autocomplete="off" onsubmit="return false">
-    <!-- decoy fields absorb Chrome's password-manager autofill so it doesn't land on the real inputs below -->
-    <input type="text" name="username" autocomplete="username" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
-    <input type="password" name="password" autocomplete="current-password" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
-    <label>Tenant ID</label>
-    <input id="tenantId" name="mozok_tenant_id" autocomplete="off" placeholder="Tenant ID (GUID or domain)">
-    <label>Client ID</label>
-    <input id="clientId" name="mozok_client_id" autocomplete="off" placeholder="Client ID">
-    <label>Client Secret</label>
-    <input id="clientSecret" name="mozok_client_secret" type="text" autocomplete="off" placeholder="Client Secret">
-    <label>Your Microsoft 365 email (send-from)</label>
-    <input id="userEmail" name="mozok_user_email" autocomplete="off" placeholder="you@yourdomain.com">
-    <button type="button" class="btn btn-ghost" onclick="clearCreds()">Clear these fields</button>
-    </form>
+  <div class="card" id="notConfigured" style="display:none;">
+    <h3>Not set up yet</h3>
+    <div class="msg err" style="display:block;">Your Microsoft 365 send credentials need to be added to Render first — go to Render → mozok-agent → Environment and add <b>TEST_SEND_TENANT_ID</b>, <b>TEST_SEND_CLIENT_ID</b>, <b>TEST_SEND_CLIENT_SECRET</b>, <b>TEST_SEND_USER_EMAIL</b> (same values you use in the main app's Connect form). One-time setup, then this page works with no further typing.</div>
   </div>
 
   <div class="card">
-    <h3>2. Send a test</h3>
+    <h3>Send a test</h3>
     <label>Test recipient (a Gmail or Outlook inbox you control)</label>
     <input id="testTo" placeholder="you@gmail.com">
     <button class="btn" id="sendBtn" onclick="sendTest()">Send test email</button>
@@ -126,7 +112,7 @@ window.fetch=function(u,o){
   </div>
 
   <div class="card" id="statusCard" style="display:none;">
-    <h3>3. Tracking status</h3>
+    <h3>Tracking status</h3>
     <div class="stat-row">
       <div class="stat-box"><div class="stat-num zero" id="statOpen">0</div><div class="stat-lbl">Opens</div></div>
       <div class="stat-box"><div class="stat-num zero" id="statClick">0</div><div class="stat-lbl">Clicks</div></div>
@@ -140,33 +126,9 @@ window.fetch=function(u,o){
 </div>
 
 <script>
-var CREDS_KEY = 'mozok_test_creds';
 var pollTimer = null;
 var pollUntil = 0;
 var currentContactId = null;
-
-function loadCreds(){
-  try {
-    var c = JSON.parse(localStorage.getItem(CREDS_KEY) || '{}');
-    if (c.tenantId) document.getElementById('tenantId').value = c.tenantId;
-    if (c.clientId) document.getElementById('clientId').value = c.clientId;
-    if (c.clientSecret) document.getElementById('clientSecret').value = c.clientSecret;
-    if (c.userEmail) document.getElementById('userEmail').value = c.userEmail;
-  } catch(e) {}
-}
-function saveCreds(){
-  localStorage.setItem(CREDS_KEY, JSON.stringify({
-    tenantId: document.getElementById('tenantId').value.trim(),
-    clientId: document.getElementById('clientId').value.trim(),
-    clientSecret: document.getElementById('clientSecret').value.trim(),
-    userEmail: document.getElementById('userEmail').value.trim()
-  }));
-}
-function clearCreds(){
-  localStorage.removeItem(CREDS_KEY);
-  ['tenantId','clientId','clientSecret','userEmail'].forEach(function(id){ document.getElementById(id).value = ''; });
-}
-loadCreds();
 
 function showMsg(el, text, ok){
   el.className = 'msg ' + (ok ? 'ok' : 'err');
@@ -174,38 +136,29 @@ function showMsg(el, text, ok){
 }
 
 async function sendTest(){
-  var tenantId = document.getElementById('tenantId').value.trim();
-  var clientId = document.getElementById('clientId').value.trim();
-  var clientSecret = document.getElementById('clientSecret').value.trim();
-  var userEmail = document.getElementById('userEmail').value.trim();
   var to = document.getElementById('testTo').value.trim();
   var msgEl = document.getElementById('sendMsg');
   var btn = document.getElementById('sendBtn');
 
-  if (!tenantId || !clientId || !clientSecret || !userEmail || !to) {
-    showMsg(msgEl, 'Fill in all fields, including the test recipient.', false);
+  if (!to) {
+    showMsg(msgEl, 'Enter a test recipient email.', false);
     return;
   }
-  if (tenantId.includes('@') || tenantId === userEmail) {
-    showMsg(msgEl, 'Tenant ID looks like an email address, not a tenant ID/GUID. This is almost always a sign browser autofill filled the wrong field — check it before sending.', false);
-    return;
-  }
-  if (clientId === clientSecret || clientId.length < 8) {
-    showMsg(msgEl, 'Client ID looks wrong (too short, or same as Client Secret). Check it before sending — this can happen if autofill filled in a saved password instead.', false);
-    return;
-  }
-  saveCreds();
   btn.disabled = true;
   btn.textContent = 'Sending...';
+  document.getElementById('notConfigured').style.display = 'none';
   try {
     var res = await fetch('/api/test-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tenantId, clientId, clientSecret, userEmail, to })
+      body: JSON.stringify({ to })
     });
     var data = await res.json();
     if (data.error) {
       showMsg(msgEl, data.error, false);
+      if (data.error.indexOf('not configured') !== -1) {
+        document.getElementById('notConfigured').style.display = 'block';
+      }
     } else {
       showMsg(msgEl, 'Sent to ' + data.to + '. Now open it from that inbox.', true);
       currentContactId = data.contactId;
