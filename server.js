@@ -641,7 +641,23 @@ app.get('/api/campaign-settings', requireAuth, async (req, res) => {
 });
 app.post('/api/campaign-settings', requireAuth, async (req, res) => {
   const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
-  try{await supabase('POST','/rest/v1/campaign_settings',{id:1,target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()},{'Prefer':'resolution=merge-duplicates'});res.json({success:true});}catch(e){res.json({error:e.message});}
+  // Fixed 2026-07-25: this used to POST a raw row with a hardcoded id:1 and no
+  // real upsert (the 'Prefer' header passed here was silently dropped — the
+  // supabase() helper only forwards method/endpoint/body). Second save onward
+  // either errored on a duplicate id or silently created extra rows depending
+  // on schema, and any field left out of the request body could get written
+  // as null instead of being left alone. Now: PATCH the existing row if one
+  // exists (partial update — untouched fields stay untouched), else create it.
+  try{
+    const payload = {target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()};
+    const existing = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=id');
+    if (Array.isArray(existing) && existing.length > 0) {
+      await supabase('PATCH','/rest/v1/campaign_settings?id=eq.1', payload);
+    } else {
+      await supabase('POST','/rest/v1/campaign_settings', {id:1, ...payload});
+    }
+    res.json({success:true});
+  }catch(e){res.json({error:e.message});}
 });
 
 app.listen(PORT, () => console.log(`Mozok Agent running on port ${PORT}`));
