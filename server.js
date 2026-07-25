@@ -222,7 +222,7 @@ app.get('/track/open/:contactId', async (req, res) => {
 
 app.get('/api/pipeline', async (req, res) => {
   try {
-    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at');
+    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&status=neq.TEST&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at');
     const now = Date.now();
     const pipeline = { ready:[], email1_sent:[], email2_due:[], email2_sent:[], email3_due:[], email3_sent:[], clicked:[], bounced:[] };
     if (!Array.isArray(contacts)) return res.json({ error: contacts?.message || 'Supabase error', pipeline: {}, total: 0, batch_stats: [], sent_today: 0 });
@@ -251,6 +251,70 @@ else if (c.human_opened) pipeline.email1_sent.push(c);
     const sent_today=contacts.filter(c=>(c.email1_sent_at||'').startsWith(todayStr)||(c.email2_sent_at||'').startsWith(todayStr)||(c.email3_sent_at||'').startsWith(todayStr)).length;
     res.json({ pipeline, total:contacts.length, batch_stats, sent_today });
   } catch(e){res.json({error:e.message});}
+});
+
+// ─── TRACKING TEST SEND (protected) ─────────────────────────────────────────────
+// Lets you send a real tracked test email to any address you control (e.g. a
+// Gmail inbox and an Outlook/O365 inbox) without touching real prospect data,
+// so you can verify the open-tracking pixel actually fires per mail provider.
+// Test contacts are tagged status:'TEST' and excluded from /api/pipeline above.
+// Added 2026-07-25 — see public/test-send.html for the UI.
+
+app.post('/api/test-email', requireAuth, async (req, res) => {
+  const { tenantId, clientId, clientSecret, userEmail, to } = req.body;
+  if (!tenantId || !clientId || !clientSecret || !userEmail || !to) {
+    return res.json({ error: 'Missing tenantId, clientId, clientSecret, userEmail, or to' });
+  }
+  try {
+    const created = await supabase('POST', '/rest/v1/contacts', {
+      email: to,
+      firstname: 'Test',
+      lastname: 'Send',
+      company: 'Test',
+      status: 'TEST',
+      created_at: new Date().toISOString()
+    });
+    const contactId = created[0]?.id;
+    if (!contactId) return res.json({ error: 'Could not create test contact: ' + JSON.stringify(created) });
+
+    const tokenRes = await getToken(tenantId, clientId, clientSecret);
+    if (!tokenRes.access_token) return res.json({ error: '[' + (tokenRes.error || 'token_error') + '] ' + (tokenRes.error_description || 'Token failed') });
+    const token = tokenRes.access_token;
+
+    const trackingPixel = `\n\n<img src="${BASE_URL}/track/open/${contactId}" width="1" height="1" style="display:none" />`;
+    const htmlBody = `<p>This is a Mozok tracking test email, sent ${new Date().toLocaleString()}.</p><p>Open this from the actual inbox (not a preview pane) to test the tracking pixel.</p>` + trackingPixel;
+
+    const msgBody = {
+      message: {
+        subject: `Mozok tracking test — ${new Date().toLocaleTimeString()}`,
+        body: { contentType: 'html', content: htmlBody },
+        toRecipients: [{ emailAddress: { address: to } }],
+        from: { emailAddress: { address: userEmail } }
+      },
+      saveToSentItems: true
+    };
+    const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
+    if (r.status === 202) {
+      await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, { email1_sent_at: new Date().toISOString() }).catch(()=>{});
+      return res.json({ success: true, contactId, to });
+    }
+    return res.json({ error: (r.data?.error?.code ? '[' + r.data.error.code + '] ' : '') + (r.data?.error?.message || `Send failed (${r.status})`) });
+  } catch (e) {
+    return res.json({ error: e.message });
+  }
+});
+
+app.get('/api/test-status/:contactId', requireAuth, async (req, res) => {
+  const { contactId } = req.params;
+  try {
+    const [contacts, events] = await Promise.all([
+      supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=email,open_count,click_count,last_opened_at,last_clicked_at,status`),
+      supabase('GET', `/rest/v1/email_events?contact_id=eq.${contactId}&order=created_at.desc&limit=20&select=event_type,metadata,created_at`)
+    ]);
+    res.json({ contact: contacts[0] || null, events: Array.isArray(events) ? events : [] });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
 });
 
 // ─── GRAPH / SUPABASE API (protected) ───────────────────────────────────────────
