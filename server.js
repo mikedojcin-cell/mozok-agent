@@ -641,22 +641,30 @@ app.get('/api/campaign-settings', requireAuth, async (req, res) => {
 });
 app.post('/api/campaign-settings', requireAuth, async (req, res) => {
   const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
-  // Fixed 2026-07-25: this used to POST a raw row with a hardcoded id:1 and no
-  // real upsert (the 'Prefer' header passed here was silently dropped — the
-  // supabase() helper only forwards method/endpoint/body). Second save onward
-  // either errored on a duplicate id or silently created extra rows depending
-  // on schema, and any field left out of the request body could get written
-  // as null instead of being left alone. Now: PATCH the existing row if one
-  // exists (partial update — untouched fields stay untouched), else create it.
+  // The supabase() helper never throws on a rejected write — it resolves
+  // whatever JSON body Supabase/PostgREST sent back, even for 400/403/etc, so
+  // a bad column name or permission issue would silently report success:true
+  // here. Now checking the actual response shape before claiming success.
   try{
     const payload = {target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()};
     const existing = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=id');
-    if (Array.isArray(existing) && existing.length > 0) {
-      await supabase('PATCH','/rest/v1/campaign_settings?id=eq.1', payload);
-    } else {
-      await supabase('POST','/rest/v1/campaign_settings', {id:1, ...payload});
+    if (!Array.isArray(existing)) {
+      return res.json({ error: 'Supabase read failed: ' + JSON.stringify(existing).slice(0, 300) });
     }
-    res.json({success:true});
+    let result;
+    if (existing.length > 0) {
+      result = await supabase('PATCH','/rest/v1/campaign_settings?id=eq.1', payload);
+    } else {
+      result = await supabase('POST','/rest/v1/campaign_settings', {id:1, ...payload});
+    }
+    // A successful PATCH/POST resolves to an array (rows) or [] (no
+    // representation requested). A PostgREST error resolves to a plain object
+    // with .code/.message/.hint instead.
+    if (result && !Array.isArray(result) && (result.code || result.message)) {
+      return res.json({ error: 'Supabase write failed: ' + (result.message || result.code) + (result.hint ? ' — ' + result.hint : '') });
+    }
+    const verify = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=target_location,job_titles');
+    res.json({success:true, saved: verify[0] || null});
   }catch(e){res.json({error:e.message});}
 });
 
