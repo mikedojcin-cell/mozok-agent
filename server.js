@@ -641,12 +641,28 @@ app.get('/api/campaign-settings', requireAuth, async (req, res) => {
 });
 app.post('/api/campaign-settings', requireAuth, async (req, res) => {
   const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
+  // Fixed 2026-07-25: this used to POST a raw row with a hardcoded id:1 and no
+  // real upsert (the 'Prefer' header passed here was silently dropped — the
+  // supabase() helper only forwards method/endpoint/body). Second save onward
+  // either errored on a duplicate id or silently created extra rows depending
+  // on schema, and any field left out of the request body could get written
+  // as null instead of being left alone. Now: PATCH the existing row if one
+  // exists (partial update — untouched fields stay untouched), else create it.
   // The supabase() helper never throws on a rejected write — it resolves
   // whatever JSON body Supabase/PostgREST sent back, even for 400/403/etc, so
   // a bad column name or permission issue would silently report success:true
   // here. Now checking the actual response shape before claiming success.
+  // 2026-07-25: campaign_settings.target_location and .job_titles are Postgres
+  // array columns, not plain text — sending them as delimited strings (even an
+  // empty string) triggers "malformed array literal" from PostgREST. Convert
+  // to real arrays (or null when empty) before writing.
+  function toArrayOrNull(str, sep) {
+    if (typeof str !== 'string' || !str.trim()) return null;
+    const arr = str.split(sep).map(s => s.trim()).filter(Boolean);
+    return arr.length ? arr : null;
+  }
   try{
-    const payload = {target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()};
+    const payload = {target_location: toArrayOrNull(target_location, ';'), industry, job_titles: toArrayOrNull(job_titles, ','), company_size_min, company_size_max, daily_send_goal: daily_send_goal||100, email_subject_1, email_subject_2, email_subject_3, updated_at: new Date().toISOString()};
     const existing = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=id');
     if (!Array.isArray(existing)) {
       return res.json({ error: 'Supabase read failed: ' + JSON.stringify(existing).slice(0, 300) });
