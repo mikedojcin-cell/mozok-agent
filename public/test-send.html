@@ -1,0 +1,251 @@
+<script>
+(function(){
+var SB='https://kwyycykglqrokqsbuiny.supabase.co';
+var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
+var t=localStorage.getItem('mozok_token');
+var _f=window.fetch;
+function exp(tok){try{var p=JSON.parse(atob(tok.split('.')[1]));return p.exp<Math.floor(Date.now()/1000);}catch(e){return true;}}
+async function refresh(){
+  var r=localStorage.getItem('mozok_refresh');if(!r)return null;
+  try{
+    var res=await _f(SB+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json','apikey':AK},body:JSON.stringify({refresh_token:r})});
+    var d=await res.json();
+    if(d.access_token){localStorage.setItem('mozok_token',d.access_token);localStorage.setItem('mozok_refresh',d.refresh_token||r);t=d.access_token;return d.access_token;}
+  }catch(e){}
+  return null;
+}
+window.fetch=function(u,o){
+  o=o||{};
+  if(typeof u==='string'&&u.includes('/api/')){o.headers=Object.assign({},o.headers,{'Authorization':'Bearer '+t});}
+  return _f(u,o).then(function(res){
+    if(res.status===401&&typeof u==='string'&&u.includes('/api/')){
+      return refresh().then(function(nt){
+        if(nt){var o2={method:o.method,headers:Object.assign({},o.headers,{'Authorization':'Bearer '+nt}),body:o.body};return _f(u,o2);}
+        localStorage.removeItem('mozok_token');window.location.href='/login.html';return res;
+      });
+    }
+    return res;
+  });
+};
+(async function(){
+  if(!t||exp(t)){var nt=await refresh();if(!nt){localStorage.removeItem('mozok_token');window.location.href='/login.html';}}
+})();
+})();
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mozok — Tracking Test</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --moz: #1D9E75;
+    --moz-dark: #085041;
+    --bg: #080d14;
+    --bg2: #0d1420;
+    --border: #1e2535;
+    --border2: #2a3347;
+    --text1: #ffffff;
+    --text2: #94a3b8;
+    --text3: #4b5563;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text1); min-height: 100vh; padding: 28px; }
+  a { color: var(--moz); text-decoration: none; }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  .back { font-size: 13px; color: var(--text2); display: inline-block; margin-bottom: 18px; }
+  h1 { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: var(--text3); margin-bottom: 22px; line-height: 1.5; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 16px; }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; margin-top: 12px; font-weight: 500; }
+  label:first-of-type { margin-top: 0; }
+  input { width: 100%; padding: 9px 12px; background: var(--bg); border: 1px solid var(--border2); border-radius: 8px; color: #fff; font-size: 13px; outline: none; font-family: 'Inter', sans-serif; }
+  input:focus { border-color: var(--moz); }
+  input::placeholder { color: var(--text3); }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 13px; font-weight: 600; margin-top: 16px; font-family: 'Inter', sans-serif; background: var(--moz); color: #fff; }
+  .btn:hover { background: var(--moz-dark); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-ghost { background: none; border: 1px solid var(--border2); color: var(--text2); }
+  .btn-ghost:hover { border-color: var(--moz); color: var(--moz); }
+  .msg { font-size: 13px; padding: 10px 14px; border-radius: 8px; margin-top: 14px; display: none; }
+  .msg.err { background: rgba(231,76,60,0.1); color: #e74c3c; border: 1px solid rgba(231,76,60,0.2); display: block; }
+  .msg.ok { background: rgba(29,158,117,0.08); color: var(--moz); border: 1px solid rgba(29,158,117,0.2); display: block; }
+  .stat-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 14px 0; }
+  .stat-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+  .stat-num { font-size: 22px; font-weight: 700; color: var(--moz); }
+  .stat-num.zero { color: var(--text3); }
+  .stat-lbl { font-size: 10px; color: var(--text3); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .events { margin-top: 4px; }
+  .ev { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 6px; font-size: 12px; }
+  .ev-type { font-weight: 600; flex-shrink: 0; }
+  .ev-type.open { color: var(--moz); }
+  .ev-type.bot_open { color: #f7ba1e; }
+  .ev-type.click { color: #4ea8de; }
+  .ev-ua { color: var(--text3); font-size: 11px; word-break: break-all; flex: 1; }
+  .ev-time { color: var(--text3); font-size: 11px; flex-shrink: 0; white-space: nowrap; }
+  .empty { color: var(--text3); font-size: 12px; padding: 10px 0; }
+  .polling { font-size: 12px; color: var(--text3); margin-top: 10px; }
+  .spin { display: inline-block; width: 11px; height: 11px; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--moz); border-radius: 50%; animation: sp .7s linear infinite; vertical-align: -1px; margin-right: 6px; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="/">&larr; Back to app</a>
+  <h1>Tracking test</h1>
+  <div class="sub">Send a real, tracked test email to any inbox you control, then open it from that inbox (not a preview pane) and watch below for the open event. Test sends are tagged separately and never show up in your real pipeline or contact counts.</div>
+
+  <div class="card">
+    <h3>1. Connect (same credentials as the main app)</h3>
+    <label>Tenant ID</label>
+    <input id="tenantId" placeholder="Tenant ID">
+    <label>Client ID</label>
+    <input id="clientId" placeholder="Client ID">
+    <label>Client Secret</label>
+    <input id="clientSecret" type="password" placeholder="Client Secret">
+    <label>Your Microsoft 365 email (send-from)</label>
+    <input id="userEmail" placeholder="you@yourdomain.com">
+  </div>
+
+  <div class="card">
+    <h3>2. Send a test</h3>
+    <label>Test recipient (a Gmail or Outlook inbox you control)</label>
+    <input id="testTo" placeholder="you@gmail.com">
+    <button class="btn" id="sendBtn" onclick="sendTest()">Send test email</button>
+    <div class="msg" id="sendMsg"></div>
+  </div>
+
+  <div class="card" id="statusCard" style="display:none;">
+    <h3>3. Tracking status</h3>
+    <div class="stat-row">
+      <div class="stat-box"><div class="stat-num zero" id="statOpen">0</div><div class="stat-lbl">Opens</div></div>
+      <div class="stat-box"><div class="stat-num zero" id="statClick">0</div><div class="stat-lbl">Clicks</div></div>
+      <div class="stat-box"><div class="stat-num zero" id="statEvents">0</div><div class="stat-lbl">Raw events</div></div>
+    </div>
+    <div class="events" id="eventsList"><div class="empty">No events yet — open the email from the recipient inbox.</div></div>
+    <div class="polling" id="pollingMsg"></div>
+    <button class="btn btn-ghost" onclick="refreshStatus()">Refresh now</button>
+    <button class="btn btn-ghost" onclick="stopPolling()">Stop auto-refresh</button>
+  </div>
+</div>
+
+<script>
+var CREDS_KEY = 'mozok_test_creds';
+var pollTimer = null;
+var pollUntil = 0;
+var currentContactId = null;
+
+function loadCreds(){
+  try {
+    var c = JSON.parse(localStorage.getItem(CREDS_KEY) || '{}');
+    if (c.tenantId) document.getElementById('tenantId').value = c.tenantId;
+    if (c.clientId) document.getElementById('clientId').value = c.clientId;
+    if (c.clientSecret) document.getElementById('clientSecret').value = c.clientSecret;
+    if (c.userEmail) document.getElementById('userEmail').value = c.userEmail;
+  } catch(e) {}
+}
+function saveCreds(){
+  localStorage.setItem(CREDS_KEY, JSON.stringify({
+    tenantId: document.getElementById('tenantId').value.trim(),
+    clientId: document.getElementById('clientId').value.trim(),
+    clientSecret: document.getElementById('clientSecret').value.trim(),
+    userEmail: document.getElementById('userEmail').value.trim()
+  }));
+}
+loadCreds();
+
+function showMsg(el, text, ok){
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+  el.textContent = text;
+}
+
+async function sendTest(){
+  var tenantId = document.getElementById('tenantId').value.trim();
+  var clientId = document.getElementById('clientId').value.trim();
+  var clientSecret = document.getElementById('clientSecret').value.trim();
+  var userEmail = document.getElementById('userEmail').value.trim();
+  var to = document.getElementById('testTo').value.trim();
+  var msgEl = document.getElementById('sendMsg');
+  var btn = document.getElementById('sendBtn');
+
+  if (!tenantId || !clientId || !clientSecret || !userEmail || !to) {
+    showMsg(msgEl, 'Fill in all fields, including the test recipient.', false);
+    return;
+  }
+  saveCreds();
+  btn.disabled = true;
+  btn.textContent = 'Sending...';
+  try {
+    var res = await fetch('/api/test-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenantId, clientId, clientSecret, userEmail, to })
+    });
+    var data = await res.json();
+    if (data.error) {
+      showMsg(msgEl, data.error, false);
+    } else {
+      showMsg(msgEl, 'Sent to ' + data.to + '. Now open it from that inbox.', true);
+      currentContactId = data.contactId;
+      document.getElementById('statusCard').style.display = 'block';
+      startPolling();
+    }
+  } catch(e) {
+    showMsg(msgEl, 'Request failed: ' + e.message, false);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Send test email';
+}
+
+function renderStatus(data){
+  var c = data.contact || {};
+  var events = data.events || [];
+  document.getElementById('statOpen').textContent = c.open_count || 0;
+  document.getElementById('statOpen').className = 'stat-num' + ((c.open_count||0) > 0 ? '' : ' zero');
+  document.getElementById('statClick').textContent = c.click_count || 0;
+  document.getElementById('statClick').className = 'stat-num' + ((c.click_count||0) > 0 ? '' : ' zero');
+  document.getElementById('statEvents').textContent = events.length;
+  document.getElementById('statEvents').className = 'stat-num' + (events.length > 0 ? '' : ' zero');
+
+  var list = document.getElementById('eventsList');
+  if (!events.length) {
+    list.innerHTML = '<div class="empty">No events yet — open the email from the recipient inbox.</div>';
+    return;
+  }
+  list.innerHTML = events.map(function(e){
+    var t = new Date(e.created_at).toLocaleTimeString();
+    var ua = (e.metadata || '(no user-agent)').toString();
+    return '<div class="ev"><span class="ev-type ' + e.event_type + '">' + e.event_type + '</span><span class="ev-ua">' + ua.replace(/</g,'&lt;') + '</span><span class="ev-time">' + t + '</span></div>';
+  }).join('');
+}
+
+async function refreshStatus(){
+  if (!currentContactId) return;
+  try {
+    var res = await fetch('/api/test-status/' + currentContactId);
+    var data = await res.json();
+    if (!data.error) renderStatus(data);
+  } catch(e) {}
+}
+
+function startPolling(){
+  stopPolling();
+  pollUntil = Date.now() + 10 * 60 * 1000; // poll for 10 minutes
+  refreshStatus();
+  pollTimer = setInterval(function(){
+    if (Date.now() > pollUntil) { stopPolling(); return; }
+    refreshStatus();
+  }, 8000);
+  document.getElementById('pollingMsg').innerHTML = '<span class="spin"></span>Auto-refreshing every 8s for 10 minutes...';
+}
+function stopPolling(){
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+  document.getElementById('pollingMsg').textContent = '';
+}
+</script>
+</body>
+</html>
