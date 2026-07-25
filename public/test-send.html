@@ -100,14 +100,21 @@ window.fetch=function(u,o){
 
   <div class="card">
     <h3>1. Connect (same credentials as the main app)</h3>
+    <div class="warn">Browser autofill can misfire on these fields and fill in saved login credentials instead. Check every field is actually correct before sending — the Tenant ID should be a GUID or your domain, never an email or password.</div>
+    <form autocomplete="off" onsubmit="return false">
+    <!-- decoy fields absorb Chrome's password-manager autofill so it doesn't land on the real inputs below -->
+    <input type="text" name="username" autocomplete="username" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
+    <input type="password" name="password" autocomplete="current-password" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;" tabindex="-1" aria-hidden="true">
     <label>Tenant ID</label>
-    <input id="tenantId" placeholder="Tenant ID">
+    <input id="tenantId" name="mozok_tenant_id" autocomplete="off" placeholder="Tenant ID (GUID or domain)">
     <label>Client ID</label>
-    <input id="clientId" placeholder="Client ID">
+    <input id="clientId" name="mozok_client_id" autocomplete="off" placeholder="Client ID">
     <label>Client Secret</label>
-    <input id="clientSecret" type="password" placeholder="Client Secret">
+    <input id="clientSecret" name="mozok_client_secret" type="text" autocomplete="off" placeholder="Client Secret">
     <label>Your Microsoft 365 email (send-from)</label>
-    <input id="userEmail" placeholder="you@yourdomain.com">
+    <input id="userEmail" name="mozok_user_email" autocomplete="off" placeholder="you@yourdomain.com">
+    <button type="button" class="btn btn-ghost" onclick="clearCreds()">Clear these fields</button>
+    </form>
   </div>
 
   <div class="card">
@@ -155,6 +162,10 @@ function saveCreds(){
     userEmail: document.getElementById('userEmail').value.trim()
   }));
 }
+function clearCreds(){
+  localStorage.removeItem(CREDS_KEY);
+  ['tenantId','clientId','clientSecret','userEmail'].forEach(function(id){ document.getElementById(id).value = ''; });
+}
 loadCreds();
 
 function showMsg(el, text, ok){
@@ -173,6 +184,14 @@ async function sendTest(){
 
   if (!tenantId || !clientId || !clientSecret || !userEmail || !to) {
     showMsg(msgEl, 'Fill in all fields, including the test recipient.', false);
+    return;
+  }
+  if (tenantId.includes('@') || tenantId === userEmail) {
+    showMsg(msgEl, 'Tenant ID looks like an email address, not a tenant ID/GUID. This is almost always a sign browser autofill filled the wrong field — check it before sending.', false);
+    return;
+  }
+  if (clientId === clientSecret || clientId.length < 8) {
+    showMsg(msgEl, 'Client ID looks wrong (too short, or same as Client Secret). Check it before sending — this can happen if autofill filled in a saved password instead.', false);
     return;
   }
   saveCreds();
