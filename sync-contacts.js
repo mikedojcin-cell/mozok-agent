@@ -189,15 +189,20 @@ async function getCampaignSettings() {
   return {};
 }
 
-function parseLocations(str) {
-  if (!str || !str.trim()) return null;
-  const parts = str.split(';').map(s => s.trim()).filter(Boolean);
+// campaign_settings.target_location / .job_titles are Postgres array columns
+// (fixed 2026-07-25) — Supabase/PostgREST hands them back as real JS arrays,
+// not delimited strings. Handle both shapes defensively just in case.
+function parseLocations(val) {
+  if (Array.isArray(val)) return val.filter(Boolean).length ? val.filter(Boolean) : null;
+  if (!val || !val.trim()) return null;
+  const parts = val.split(';').map(s => s.trim()).filter(Boolean);
   return parts.length ? parts : null;
 }
 
-function parseTitles(str) {
-  if (!str || !str.trim()) return null;
-  const parts = str.split(',').map(s => s.trim()).filter(Boolean);
+function parseTitles(val) {
+  if (Array.isArray(val)) return val.filter(Boolean).length ? val.filter(Boolean) : null;
+  if (!val || !val.trim()) return null;
+  const parts = val.split(',').map(s => s.trim()).filter(Boolean);
   return parts.length ? parts : null;
 }
 
