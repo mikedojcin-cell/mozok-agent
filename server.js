@@ -259,11 +259,28 @@ else if (c.human_opened) pipeline.email1_sent.push(c);
 // so you can verify the open-tracking pixel actually fires per mail provider.
 // Test contacts are tagged status:'TEST' and excluded from /api/pipeline above.
 // Added 2026-07-25 — see public/test-send.html for the UI.
+//
+// Credentials come from env vars, NOT a form field. First attempt had the user
+// retype tenantId/clientId/clientSecret into a browser form on every visit —
+// Chrome's password manager kept hijacking those fields and autofilling real
+// saved account passwords into them (ignores autocomplete="off" by design).
+// Since these values are static per Microsoft app registration anyway, they
+// belong server-side, same pattern as SUPABASE_KEY/ANTHROPIC_KEY below. Set
+// TEST_SEND_TENANT_ID, TEST_SEND_CLIENT_ID, TEST_SEND_CLIENT_SECRET,
+// TEST_SEND_USER_EMAIL in Render's Environment tab (same values you use in
+// the main app's Connect form) — fixed 2026-07-25.
 
 app.post('/api/test-email', requireAuth, async (req, res) => {
-  const { tenantId, clientId, clientSecret, userEmail, to } = req.body;
-  if (!tenantId || !clientId || !clientSecret || !userEmail || !to) {
-    return res.json({ error: 'Missing tenantId, clientId, clientSecret, userEmail, or to' });
+  const { to } = req.body;
+  const tenantId = process.env.TEST_SEND_TENANT_ID;
+  const clientId = process.env.TEST_SEND_CLIENT_ID;
+  const clientSecret = process.env.TEST_SEND_CLIENT_SECRET;
+  const userEmail = process.env.TEST_SEND_USER_EMAIL;
+  if (!tenantId || !clientId || !clientSecret || !userEmail) {
+    return res.json({ error: 'Test-send credentials not configured. Set TEST_SEND_TENANT_ID, TEST_SEND_CLIENT_ID, TEST_SEND_CLIENT_SECRET, and TEST_SEND_USER_EMAIL in Render → Environment (same values as the main app Connect form).' });
+  }
+  if (!to) {
+    return res.json({ error: 'Missing test recipient email' });
   }
   try {
     const created = await supabase('POST', '/rest/v1/contacts', {
