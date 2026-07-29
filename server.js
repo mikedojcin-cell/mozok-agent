@@ -15,7 +15,7 @@ const BASE_URL = 'https://app.mozok.co';
 
 
 
-// ─── AUTH MIDDLEWARE ────────────────────────────────────────────────────────────
+// ─── AUTH MIDDLEWARE ─────────────────────────────────────────────────────────
 
 async function requireAuth(req, res, next) {
   const auth = req.headers['authorization'];
@@ -58,7 +58,7 @@ app.use('/api/graph', requireAuth);
 app.use('/api/meta', requireAuth);
 app.use('/api/generate-post', requireAuth);
 
-// ─── HELPERS ────────────────────────────────────────────────────────────────────
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 async function supabase(method, endpoint, body) {
   return new Promise((resolve, reject) => {
@@ -141,7 +141,7 @@ async function metaGet(url) {
   });
 }
 
-// ─── EMAIL CLICK TRACKING (public) ──────────────────────────────────────────────
+// ─── EMAIL CLICK TRACKING (public) ───────────────────────────────────────────
 
 app.get('/track/click/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -164,7 +164,7 @@ app.get('/track/click/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
-// ─── CLEAN VISIT REDIRECT (public) ──────────────────────────────────────────────
+// ─── CLEAN VISIT REDIRECT (public) ───────────────────────────────────────────
 
 app.get('/visit/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -187,19 +187,12 @@ app.get('/visit/:contactId', async (req, res) => {
   res.redirect(redirectUrl);
 });
 
-// ─── EMAIL OPEN TRACKING (public) ───────────────────────────────────────────────
+// ─── EMAIL OPEN TRACKING (public) ─────────────────────────────────────────────
 
 const PIXEL = Buffer.from('R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7', 'base64');
 
-// NOTE: GoogleImageProxy, YahooMailProxy, "MS Exchange" and "Microsoft Office" were
-// REMOVED from this list on 2026-07-25. Those strings are what Gmail/Yahoo/Outlook's
-// own image-proxy infrastructure sends when a REAL HUMAN opens the email — proxying
-// images through the provider's own servers (to hide the recipient's IP/UA) is now
-// standard privacy behavior at Google, Yahoo, and Microsoft. Blocking those patterns
-// was silently discarding real opens from anyone on Gmail or Outlook/O365 — i.e. most
-// of a B2B prospect list. Left in place: dedicated corporate security-scanner and
-// generic-HTTP-library signatures, which are unambiguous automated fetches.
-const BOT_UA_PATTERNS = ['Synapse','msnbot','bingbot','curl','python-requests','okhttp','Go-http-client','Googlebot','Google-Read-Aloud','Cloudflare','Barracuda','Proofpoint','Mimecast','IronPort','SpamAssassin','Symantec','Trend Micro','Wget','libwww','Jakarta','Java/','Apache-HttpClient'];
+
+const BOT_UA_PATTERNS = ['YahooMailProxy','Synapse','y!j-asr','msnbot','bingbot','MS Exchange','Microsoft Office','curl','python-requests','okhttp','Go-http-client','GoogleImageProxy','Googlebot','Google-Read-Aloud','Cloudflare','Barracuda','Proofpoint','Mimecast','IronPort','SpamAssassin','Symantec','Trend Micro','Wget','libwww','Jakarta','Java/','Apache-HttpClient'];
 function isBotUA(ua){if(!ua||ua.trim()==='')return true;const l=ua.toLowerCase();return BOT_UA_PATTERNS.some(p=>l.includes(p.toLowerCase()));}
 app.get('/track/open/:contactId', async (req, res) => {
   const { contactId } = req.params;
@@ -218,11 +211,11 @@ app.get('/track/open/:contactId', async (req, res) => {
   res.end(PIXEL);
 });
 
-// ─── EMAIL PIPELINE API (protected) ─────────────────────────────────────────────
+// ─── EMAIL PIPELINE API (protected) ───────────────────────────────────────────
 
 app.get('/api/pipeline', async (req, res) => {
   try {
-    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&status=neq.TEST&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at');
+    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at');
     const now = Date.now();
     const pipeline = { ready:[], email1_sent:[], email2_due:[], email2_sent:[], email3_due:[], email3_sent:[], clicked:[], bounced:[] };
     if (!Array.isArray(contacts)) return res.json({ error: contacts?.message || 'Supabase error', pipeline: {}, total: 0, batch_stats: [], sent_today: 0 });
@@ -237,9 +230,9 @@ app.get('/api/pipeline', async (req, res) => {
       if(c.status==='BOUNCED')pipeline.bounced.push(c);
       else if(hasClicked)pipeline.clicked.push(c);
       else if(c.status==='EMAIL_3_SENT')pipeline.email3_sent.push(c);
-      else if(c.status==='EMAIL_2_SENT'&&e2days>=5)pipeline.email3_due.push(c);
+      else if(c.status==='EMAIL_2_SENT'&&e2days>=3)pipeline.email3_due.push(c);
       else if(c.status==='EMAIL_2_SENT')pipeline.email2_sent.push(c);
-      else if(c.status==='EMAIL_1_SENT'&&e1days>=5)pipeline.email2_due.push(c);
+      else if(c.status==='EMAIL_1_SENT'&&e1days>=3)pipeline.email2_due.push(c);
       else if(c.status==='EMAIL_1_SENT')pipeline.email1_sent.push(c);
 else if (c.human_opened) pipeline.email1_sent.push(c);
             else pipeline.ready.push(c);
@@ -253,96 +246,15 @@ else if (c.human_opened) pipeline.email1_sent.push(c);
   } catch(e){res.json({error:e.message});}
 });
 
-// ─── TRACKING TEST SEND (protected) ─────────────────────────────────────────────
-// Lets you send a real tracked test email to any address you control (e.g. a
-// Gmail inbox and an Outlook/O365 inbox) without touching real prospect data,
-// so you can verify the open-tracking pixel actually fires per mail provider.
-// Test contacts are tagged status:'TEST' and excluded from /api/pipeline above.
-// Added 2026-07-25 — see public/test-send.html for the UI.
-//
-// Credentials come from env vars, NOT a form field. First attempt had the user
-// retype tenantId/clientId/clientSecret into a browser form on every visit —
-// Chrome's password manager kept hijacking those fields and autofilling real
-// saved account passwords into them (ignores autocomplete="off" by design).
-// Since these values are static per Microsoft app registration anyway, they
-// belong server-side, same pattern as SUPABASE_KEY/ANTHROPIC_KEY below. Set
-// TEST_SEND_TENANT_ID, TEST_SEND_CLIENT_ID, TEST_SEND_CLIENT_SECRET,
-// TEST_SEND_USER_EMAIL in Render's Environment tab (same values you use in
-// the main app's Connect form) — fixed 2026-07-25.
-
-app.post('/api/test-email', requireAuth, async (req, res) => {
-  const { to } = req.body;
-  const tenantId = process.env.TEST_SEND_TENANT_ID;
-  const clientId = process.env.TEST_SEND_CLIENT_ID;
-  const clientSecret = process.env.TEST_SEND_CLIENT_SECRET;
-  const userEmail = process.env.TEST_SEND_USER_EMAIL;
-  if (!tenantId || !clientId || !clientSecret || !userEmail) {
-    return res.json({ error: 'Test-send credentials not configured. Set TEST_SEND_TENANT_ID, TEST_SEND_CLIENT_ID, TEST_SEND_CLIENT_SECRET, and TEST_SEND_USER_EMAIL in Render → Environment (same values as the main app Connect form).' });
-  }
-  if (!to) {
-    return res.json({ error: 'Missing test recipient email' });
-  }
-  try {
-    const created = await supabase('POST', '/rest/v1/contacts', {
-      email: to,
-      firstname: 'Test',
-      lastname: 'Send',
-      company: 'Test',
-      status: 'TEST',
-      created_at: new Date().toISOString()
-    });
-    const contactId = created[0]?.id;
-    if (!contactId) return res.json({ error: 'Could not create test contact: ' + JSON.stringify(created) });
-
-    const tokenRes = await getToken(tenantId, clientId, clientSecret);
-    if (!tokenRes.access_token) return res.json({ error: '[' + (tokenRes.error || 'token_error') + '] ' + (tokenRes.error_description || 'Token failed') });
-    const token = tokenRes.access_token;
-
-    const trackingPixel = `\n\n<img src="${BASE_URL}/track/open/${contactId}" width="1" height="1" style="display:none" />`;
-    const htmlBody = `<p>This is a Mozok tracking test email, sent ${new Date().toLocaleString()}.</p><p>Open this from the actual inbox (not a preview pane) to test the tracking pixel.</p>` + trackingPixel;
-
-    const msgBody = {
-      message: {
-        subject: `Mozok tracking test — ${new Date().toLocaleTimeString()}`,
-        body: { contentType: 'html', content: htmlBody },
-        toRecipients: [{ emailAddress: { address: to } }],
-        from: { emailAddress: { address: userEmail } }
-      },
-      saveToSentItems: true
-    };
-    const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
-    if (r.status === 202) {
-      await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, { email1_sent_at: new Date().toISOString() }).catch(()=>{});
-      return res.json({ success: true, contactId, to });
-    }
-    return res.json({ error: (r.data?.error?.code ? '[' + r.data.error.code + '] ' : '') + (r.data?.error?.message || `Send failed (${r.status})`) });
-  } catch (e) {
-    return res.json({ error: e.message });
-  }
-});
-
-app.get('/api/test-status/:contactId', requireAuth, async (req, res) => {
-  const { contactId } = req.params;
-  try {
-    const [contacts, events] = await Promise.all([
-      supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=email,open_count,click_count,last_opened_at,last_clicked_at,status`),
-      supabase('GET', `/rest/v1/email_events?contact_id=eq.${contactId}&order=created_at.desc&limit=20&select=event_type,metadata,created_at`)
-    ]);
-    res.json({ contact: contacts[0] || null, events: Array.isArray(events) ? events : [] });
-  } catch (e) {
-    res.json({ error: e.message });
-  }
-});
-
-// ─── GRAPH / SUPABASE API (protected) ───────────────────────────────────────────
+// ─── GRAPH / SUPABASE API (protected) ─────────────────────────────────────────
 
 app.post('/api/graph', async (req, res) => {
   const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
 
   if (action === 'getContacts') {
-    const { status, offset = 0 } = req.body;  // ← offset added for pagination
+    const { status } = req.body;
     try {
-      const data = await supabase('GET', `/rest/v1/contacts?status=eq.${status}&email=neq.&order=created_at.desc&limit=100&offset=${offset}`);
+      const data = await supabase('GET', `/rest/v1/contacts?status=eq.${status}&email=neq.&order=created_at.desc&limit=100`);
       return res.json({ results: Array.isArray(data) ? data : [], total: Array.isArray(data) ? data.length : 0 });
     } catch(e) { return res.json({ error: e.message }); }
   }
@@ -378,7 +290,6 @@ app.post('/api/graph', async (req, res) => {
   if (action === 'sendEmail') {
     const { to, body: emailBody, contactId } = req.body;
     const emailNum = req.body.emailNum || 1;
-    if (!contactId) console.warn(`[sendEmail] WARNING: sending to ${to} with no contactId — this email will have NO open/click tracking pixel and cannot be attributed to a contact.`);
     const [_sRows, _cRows] = await Promise.all([
       supabase('GET', '/rest/v1/campaign_settings?id=eq.1&select=email_subject_1,email_subject_2,email_subject_3'),
       contactId ? supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=firstname,company`) : Promise.resolve([])
@@ -469,7 +380,7 @@ app.post('/api/graph', async (req, res) => {
   }
 });
 
-// ─── META OAUTH ─────────────────────────────────────────────────────────────────
+// ─── META OAUTH ───────────────────────────────────────────────────────────────
 
 app.get('/auth/meta', (req, res) => {
   const { clientId } = req.query;
@@ -492,14 +403,14 @@ app.get('/auth/meta/callback', async (req, res) => {
   }
 });
 
-// ─── META INSIGHTS (protected) ──────────────────────────────────────────────────
+// ─── META INSIGHTS (protected) ────────────────────────────────────────────────
 
 app.get('/api/meta/pages/:clientId', async (req, res) => {
   const { clientId } = req.params;
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token – client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     res.json({ pages: pages.data || [] });
   } catch(e) {
@@ -512,7 +423,7 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token – client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     if (!pages.data || !pages.data.length) return res.json({ error: 'No pages found' });
     const page = pages.data[0];
@@ -528,7 +439,7 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   }
 });
 
-// ─── CONTACT FORM (public) ───────────────────────────────────────────────────────
+// ─── CONTACT FORM (public) ────────────────────────────────────────────────────
 
 app.post('/api/contact', async (req, res) => {
   const { name, email, message } = req.body;
@@ -561,7 +472,7 @@ app.post('/api/contact', async (req, res) => {
   }
 });
 
-// ─── CLAUDE POST GENERATOR (protected) ──────────────────────────────────────────
+// ─── CLAUDE POST GENERATOR (protected) ────────────────────────────────────────
 
 app.post('/api/generate-post', async (req, res) => {
   const { prompt } = req.body;
@@ -602,78 +513,7 @@ app.post('/api/generate-post', async (req, res) => {
   }
 });
 
-// Cheap, no-auth, no-DB endpoint for external uptime pings — hitting this keeps the
-// Render free-tier dyno warm so tracking-pixel requests don't get dropped by the
-// recipient's mail client while the server is cold-starting (see 2026-07-25 fix notes).
-// MUST be registered before the '*' catch-all below, or the catch-all swallows it first.
-app.get('/health', (req, res) => res.status(200).send('ok'));
-
-// CAMPAIGN SETTINGS
-// MUST be registered before the '*' catch-all below (same bug as /health above) —
-// GET /api/campaign-settings was being silently swallowed by the catch-all and
-// returning index.html's HTML instead of JSON. settings.html's fetch().json()
-// would throw parsing '<script>...' as JSON, so the page always looked blank
-// even after a successful save. Moved here 2026-07-25.
-app.get('/api/campaign-settings', requireAuth, async (req, res) => {
-  try{const rows=await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=*');res.json(rows[0]||{});}catch(e){res.json({error:e.message});}
-});
-app.post('/api/campaign-settings', requireAuth, async (req, res) => {
-  const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
-  // Fixed 2026-07-25: this used to POST a raw row with a hardcoded id:1 and no
-  // real upsert (the 'Prefer' header passed here was silently dropped — the
-  // supabase() helper only forwards method/endpoint/body). Second save onward
-  // either errored on a duplicate id or silently created extra rows depending
-  // on schema, and any field left out of the request body could get written
-  // as null instead of being left alone. Now: PATCH the existing row if one
-  // exists (partial update — untouched fields stay untouched), else create it.
-  // The supabase() helper never throws on a rejected write — it resolves
-  // whatever JSON body Supabase/PostgREST sent back, even for 400/403/etc, so
-  // a bad column name or permission issue would silently report success:true
-  // here. Now checking the actual response shape before claiming success.
-  // 2026-07-25: campaign_settings.job_titles is a Postgres array column —
-  // sending it as a delimited string (even an empty string) triggers "malformed
-  // array literal" from PostgREST. Convert to a real array (or null when empty).
-  // target_location, by contrast, IS plain text — the array-literal error we hit
-  // earlier came specifically from job_titles being blank, not target_location.
-  // Sending target_location as an array too (an earlier version of this fix did)
-  // silently "succeeded" but stored the JSON-stringified array as literal text,
-  // e.g. '["Ontario, Canada"]' with visible brackets/quotes — caught by testing
-  // an actual save + reload, not by the error response, since PostgREST didn't
-  // reject it. Confirmed via GET /api/campaign-settings: target_location comes
-  // back as typeof 'string', job_titles as a real array.
-  function toArrayOrNull(str, sep) {
-    if (typeof str !== 'string' || !str.trim()) return null;
-    const arr = str.split(sep).map(s => s.trim()).filter(Boolean);
-    return arr.length ? arr : null;
-  }
-  function toTextOrNull(str) {
-    if (typeof str !== 'string' || !str.trim()) return null;
-    return str.trim();
-  }
-  try{
-    const payload = {target_location: toTextOrNull(target_location), industry, job_titles: toArrayOrNull(job_titles, ','), company_size_min, company_size_max, daily_send_goal: daily_send_goal||100, email_subject_1, email_subject_2, email_subject_3, updated_at: new Date().toISOString()};
-    const existing = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=id');
-    if (!Array.isArray(existing)) {
-      return res.json({ error: 'Supabase read failed: ' + JSON.stringify(existing).slice(0, 300) });
-    }
-    let result;
-    if (existing.length > 0) {
-      result = await supabase('PATCH','/rest/v1/campaign_settings?id=eq.1', payload);
-    } else {
-      result = await supabase('POST','/rest/v1/campaign_settings', {id:1, ...payload});
-    }
-    // A successful PATCH/POST resolves to an array (rows) or [] (no
-    // representation requested). A PostgREST error resolves to a plain object
-    // with .code/.message/.hint instead.
-    if (result && !Array.isArray(result) && (result.code || result.message)) {
-      return res.json({ error: 'Supabase write failed: ' + (result.message || result.code) + (result.hint ? ' — ' + result.hint : '') });
-    }
-    const verify = await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=target_location,job_titles');
-    res.json({success:true, saved: verify[0] || null});
-  }catch(e){res.json({error:e.message});}
-});
-
-// ─── CATCH ALL ───────────────────────────────────────────────────────────────────
+// ─── CATCH ALL ─────────────────────────────────────────────────────────────────
 
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
@@ -699,6 +539,14 @@ app.post('/api/bounce-check', requireAuth, async (req, res) => {
     for(const email of unique){const ex=await supabase('GET',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}&select=id,status`);if(ex.length>0&&ex[0].status!=='BOUNCED'){await supabase('PATCH',`/rest/v1/contacts?email=eq.${encodeURIComponent(email)}`,{status:'BOUNCED',bounced_at:new Date().toISOString()});marked++;}}
     res.json({bounced:unique,checked:ndrRes.data.value.length,marked});
   }catch(e){res.json({error:e.message});}
+});
+// CAMPAIGN SETTINGS
+app.get('/api/campaign-settings', requireAuth, async (req, res) => {
+  try{const rows=await supabase('GET','/rest/v1/campaign_settings?id=eq.1&select=*');res.json(rows[0]||{});}catch(e){res.json({error:e.message});}
+});
+app.post('/api/campaign-settings', requireAuth, async (req, res) => {
+  const{target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal,email_subject_1,email_subject_2,email_subject_3}=req.body;
+  try{await supabase('POST','/rest/v1/campaign_settings',{id:1,target_location,industry,job_titles,company_size_min,company_size_max,daily_send_goal:daily_send_goal||100,email_subject_1,email_subject_2,email_subject_3,updated_at:new Date().toISOString()},{'Prefer':'resolution=merge-duplicates'});res.json({success:true});}catch(e){res.json({error:e.message});}
 });
 
 app.listen(PORT, () => console.log(`Mozok Agent running on port ${PORT}`));
