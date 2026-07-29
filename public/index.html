@@ -1,4 +1,4 @@
-—<script>
+<script>
 (function(){
 var SB='https://kwyycykglqrokqsbuiny.supabase.co';
 var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
@@ -606,7 +606,7 @@ function updateCount() {
 // ── SEND EMAILS ───────────────────────────────────────────────────────────────
 async function sendEmails() {
   if (!connected) { alert('Connect to Outlook first.'); return; }
-Quick question before I say more
+    const selected = [...document.querySelectorAll('.contact-cb:checked')].map(cb => allContacts[parseInt(cb.dataset.idx)]);
   if (!selected.length) { alert('Select at least one contact.'); return; }
 
   slog('elog'); sp('esp',1);
