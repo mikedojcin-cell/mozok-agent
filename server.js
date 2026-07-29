@@ -410,7 +410,7 @@ app.get('/api/meta/pages/:clientId', async (req, res) => {
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token - client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     res.json({ pages: pages.data || [] });
   } catch(e) {
@@ -423,7 +423,7 @@ app.get('/api/meta/insights/:clientId', async (req, res) => {
   try {
     const rows = await supabase('GET', `/rest/v1/clients?id=eq.${clientId}&select=meta_access_token`);
     const token = rows[0]?.meta_access_token;
-    if (!token) return res.json({ error: 'No Meta token — client needs to connect Facebook' });
+    if (!token) return res.json({ error: 'No Meta token - client needs to connect Facebook' });
     const pages = await metaGet(`https://graph.facebook.com/v19.0/me/accounts?access_token=${token}`);
     if (!pages.data || !pages.data.length) return res.json({ error: 'No pages found' });
     const page = pages.data[0];
