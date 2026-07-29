@@ -1,4 +1,4 @@
-<script>
+—<script>
 (function(){
 var SB='https://kwyycykglqrokqsbuiny.supabase.co';
 var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
@@ -606,7 +606,7 @@ function updateCount() {
 // ── SEND EMAILS ───────────────────────────────────────────────────────────────
 async function sendEmails() {
   if (!connected) { alert('Connect to Outlook first.'); return; }
-  const selected = [...document.querySelectorAll('.contact-cb:checked')].map(cb => allContacts[parseInt(cb.dataset.idx)]);
+Quick question before I say more
   if (!selected.length) { alert('Select at least one contact.'); return; }
 
   slog('elog'); sp('esp',1);
@@ -626,12 +626,12 @@ async function sendEmails() {
 
     if (filter === 'NEW') {
       subject = `Quick question, ${firstName}`;
-      body = `Hi ${firstName},\n\nQuick question before I say more — do you handle your social media yourself, or does someone help you with it?\n\nAsking because I run Mozok, and we handle social media completely for business owners who know they should be posting but never get around to it.\n\nJust curious which camp you're in.\n\nMike\n${phone}`;
+            body = `Hi ${firstName},\n\nQuick one - I'll build ${company} 3 sample social posts this week, free, so you can see the quality before anything else. No call, no pitch.\n\nWant them? Just reply "yes" and I'll have them to you by Friday.\n\nMike\n${phone}`;
       newStatus = 'EMAIL_1_SENT';
       dateField = 'email1_sent_at';
     } else if (filter === 'EMAIL_1_SENT_DUE') {
       subject = `Re: Quick question, ${firstName}`;
-      body = `Hi ${firstName},\n\nFollowing up on my note from last week.\n\nIf you're handling social yourself — how's that going? Most owners I talk to are posting inconsistently or not at all, and they know it.\n\nWe take it completely off your plate. You approve posts by email, we handle everything else. Plans start at $497/month, no contracts.\n\nSee what we do: https://app.mozok.co/visit/${contact.id}\n\nWorth a quick conversation?\n\nMike\n${phone}`;
+            body = `Hi ${firstName},\n\nFollowing up in case this got buried - still happy to send ${company} 3 free sample posts this week if useful. Takes 10 seconds to say yes.\n\nIf social isn't a priority right now, no worries - just let me know and I'll stop following up. If it is, plans start at $497/month, no contracts, once you've seen the samples.\n\nSee what we do: https://app.mozok.co/visit/${contact.id}\n\nWorth a quick look?\n\nMike\n${phone}`;
       newStatus = 'EMAIL_2_SENT';
       dateField = 'email2_sent_at';
     } else {
