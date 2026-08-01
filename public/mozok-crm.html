@@ -517,9 +517,9 @@ function getBucket(c) {
   if (c.status === 'BOUNCED') return 'bounced';
   if (hasClicked) return 'clicked';
   if (c.status === 'EMAIL_3_SENT') return 'e3';
-  if (c.status === 'EMAIL_2_SENT' && e2days >= 5) return 'e3due';
+  if (c.status === 'EMAIL_2_SENT' && e2days >= 7) return 'e3due';
   if (c.status === 'EMAIL_2_SENT') return 'e2';
-  if (c.status === 'EMAIL_1_SENT' && e1days >= 5) return 'e2due';
+  if (c.status === 'EMAIL_1_SENT' && e1days >= 7) return 'e2due';
   if (c.status === 'EMAIL_1_SENT') return 'e1';
   if (humanOpened) return 'e1';  // opened but status not updated
   return 'ready';
@@ -531,12 +531,12 @@ function getNextAction(c, bucket) {
   switch(bucket) {
     case 'ready':    return { label: 'Send Email 1', cls: 'send-now', days: null };
     case 'e1': {
-      const left = 5 - e1days;
+      const left = 7 - e1days;
       return { label: `E2 in ${Math.ceil(left)}d`, cls: 'waiting', days: left };
     }
     case 'e2due':    return { label: 'Send Email 2 Now', cls: 'urgent', days: -1 };
     case 'e2': {
-      const left = 5 - e2days;
+      const left = 7 - e2days;
       return { label: `E3 in ${Math.ceil(left)}d`, cls: 'waiting', days: left };
     }
     case 'e3due':    return { label: 'Send Email 3 Now', cls: 'urgent', days: -2 };
