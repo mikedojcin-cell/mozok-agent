@@ -288,7 +288,7 @@ async function syncCustom(locations, titles) {
     organization_num_employees_ranges: ['1,10', '11,50', '51,200'],
     contact_email_status: ['verified', 'likely to engage'],
     page: state.page,
-    per_page: 100
+    per_page: 45
   });
 
   if (!apolloData.people || apolloData.people.length === 0) {
@@ -336,7 +336,7 @@ async function syncDefault() {
     organization_num_employees_ranges: ['1,10', '11,50', '51,200'],
     contact_email_status: ['verified', 'likely to engage'],
     page: state.page,
-    per_page: 100
+    per_page: 45
   });
 
   if (!apolloData.people || apolloData.people.length === 0) {

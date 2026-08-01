@@ -105,7 +105,7 @@ async function getToken(tenantId, clientId, clientSecret) {
   });
 }
 
-async function graphCall(token, method, urlPath, body) {
+async function graphCall(token, method, urlPath, body, extraHeaders) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
     const req = https.request({
@@ -115,6 +115,7 @@ async function graphCall(token, method, urlPath, body) {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
+        ...(extraHeaders || {}),
         ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
       }
     }, res => {
@@ -237,9 +238,9 @@ app.get('/api/pipeline', async (req, res) => {
       if(c.status==='BOUNCED')pipeline.bounced.push(c);
       else if(hasClicked)pipeline.clicked.push(c);
       else if(c.status==='EMAIL_3_SENT')pipeline.email3_sent.push(c);
-      else if(c.status==='EMAIL_2_SENT'&&e2days>=3)pipeline.email3_due.push(c);
+      else if(c.status==='EMAIL_2_SENT'&&e2days>=7)pipeline.email3_due.push(c);
       else if(c.status==='EMAIL_2_SENT')pipeline.email2_sent.push(c);
-      else if(c.status==='EMAIL_1_SENT'&&e1days>=3)pipeline.email2_due.push(c);
+      else if(c.status==='EMAIL_1_SENT'&&e1days>=7)pipeline.email2_due.push(c);
       else if(c.status==='EMAIL_1_SENT')pipeline.email1_sent.push(c);
 else if (c.human_opened) pipeline.email1_sent.push(c);
             else pipeline.ready.push(c);
@@ -690,8 +691,12 @@ app.post('/api/bounce-check', requireAuth, async (req, res) => {
     if(!tokenRes.access_token)return res.json({error:'Token failed'});
     const token=tokenRes.access_token;
     const filter=encodeURIComponent("contains(subject,'Undeliverable') or contains(subject,'Delivery has failed') or contains(subject,'Mail Delivery Subsystem')");
-    const ndrRes=await graphCall(token,'GET',`/v1.0/users/${userEmail}/messages?$filter=${filter}&$top=50&$select=subject,bodyPreview`,null);
-    if(!ndrRes?.data?.value)return res.json({bounced:[],checked:0});
+    // NOTE (fixed 2026-08-01): contains() filters on message properties require the
+    // ConsistencyLevel:eventual header + $count=true, or Graph returns a 400 that this
+    // code was previously swallowing as a silent "checked:0" success. That's why bounce
+    // detection has been reporting 0 checked even with real NDRs sitting in the inbox.
+    const ndrRes=await graphCall(token,'GET',`/v1.0/users/${userEmail}/messages?$filter=${filter}&$top=50&$count=true&$select=subject,bodyPreview`,null,{'ConsistencyLevel':'eventual'});
+    if(!ndrRes?.data?.value)return res.json({bounced:[],checked:0,debug_error:ndrRes?.data?.error?.message||('Graph returned status '+ndrRes?.status+' with no value array — likely a permissions or ConsistencyLevel issue, not "no bounces found."')});
     const bouncedEmails=[];
     for(const msg of ndrRes.data.value){const m=((msg.subject||'')+(msg.bodyPreview||'')).match(/[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g)||[];m.forEach(e=>{if(!e.includes('postmaster')&&!e.includes('mailer-daemon')&&e.toLowerCase()!==userEmail.toLowerCase())bouncedEmails.push(e.toLowerCase());});}
     const unique=[...new Set(bouncedEmails)];
