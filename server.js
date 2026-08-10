@@ -13,6 +13,17 @@ const META_APP_SECRET = process.env.META_APP_SCRET
 const META_REDIRECT = 'https://app.mozok.co/auth/meta/callback';
 const BASE_URL = 'https://app.mozok.co';
 
+// ── Send pacing state (in-memory, single-instance) ──────────────────────────
+// Root cause of the "dozens of identical-template emails in a row, ~30-45s
+// apart" pattern flagged in Mozok_Cold_Email_Sequence_v2.md: nothing server-
+// side ever enforced a minimum gap between sends or a hard daily cap. The
+// daily_send_goal setting existed but was never actually checked before
+// sending. Fixed below — every send now waits out a randomized minimum gap
+// and is blocked once today's cap is hit, regardless of how fast the caller
+// (CRM loop, double-click, etc.) fires requests.
+let _lastSendAtMs = 0;
+const _sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 
 
 // ─── AUTH MIDDLEWARE ────────────────────────────────────────────────────────────
@@ -397,7 +408,7 @@ app.post('/api/graph', async (req, res) => {
     }
 
     const [_sRows, _cRows] = await Promise.all([
-      supabase('GET', '/rest/v1/campaign_settings?id=eq.1&select=email_subject_1,email_subject_2,email_subject_3'),
+      supabase('GET', '/rest/v1/campaign_settings?id=eq.1&select=email_subject_1,email_subject_2,email_subject_3,daily_send_goal'),
       contactId ? supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=firstname,company`) : Promise.resolve([])
     ]);
     const _s = _sRows[0] || {}, _c = _cRows[0] || {};
@@ -405,6 +416,33 @@ app.post('/api/graph', async (req, res) => {
       .replace(/\{\{firstname\}\}/gi, _c.firstname || '')
       .replace(/\{\{company\}\}/gi, _c.company || '')
       .trim();
+
+    // ── Hard daily send cap ──────────────────────────────────────────────
+    // Cold-email deliverability data (see Mozok_Cold_Email_Sequence_v2.md)
+    // recommends ~40-50 sends/day per mailbox. daily_send_goal defaults to
+    // 100 and was never enforced — just a number the UI displayed. Enforce
+    // it here, counting anything stamped as sent today across all 3 touches.
+    const _dailyCap = _s.daily_send_goal || 45;
+    const _todayStartIso = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00.000Z').toISOString();
+    const _todayCountRows = await supabase(
+      'GET',
+      `/rest/v1/contacts?select=id&or=(email1_sent_at.gte.${_todayStartIso},email2_sent_at.gte.${_todayStartIso},email3_sent_at.gte.${_todayStartIso})`
+    ).catch(() => null);
+    if (Array.isArray(_todayCountRows) && _todayCountRows.length >= _dailyCap) {
+      return res.json({ error: `Daily send cap reached (${_todayCountRows.length}/${_dailyCap} sent today). Sending more today risks spam flags — resume tomorrow, or raise daily_send_goal in Settings if you're sure.`, capReached: true });
+    }
+
+    // ── Minimum gap between sends ────────────────────────────────────────
+    // Enforces real wall-clock pacing regardless of how fast the caller
+    // loops. Randomized 20-40s so the pattern doesn't look like a bot firing
+    // on a fixed interval, which is its own spam-filter signal.
+    const _gapMs = 20000 + Math.floor(Math.random() * 20000);
+    const _sinceLastMs = Date.now() - _lastSendAtMs;
+    if (_sinceLastMs < _gapMs) {
+      await _sleep(_gapMs - _sinceLastMs);
+    }
+    _lastSendAtMs = Date.now();
+
     try {
       const tokenRes = await getToken(tenantId, clientId, clientSecret);
       if (!tokenRes.access_token) return res.json({ error: '[' + (tokenRes.error||'token_error') + '] ' + (tokenRes.error_description || 'Token failed') });
