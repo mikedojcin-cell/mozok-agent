@@ -837,7 +837,16 @@ document.getElementById('btn-save-settings').addEventListener('click', async () 
 });
 
 // -- SEND EMAIL 1 TO SELECTED --------------------------------------------------
+// Re-entrancy guard: a double-click (or a slow first click that leaves the
+// button feeling unresponsive) used to fire this handler twice concurrently.
+// Both runs computed "ready" from the same stale allContacts snapshot, so
+// both sent to the same contacts — this was a real cause of duplicate sends.
+// The server now also refuses duplicate sends (see sendEmail idempotency
+// guard), but we still disable the button here so it fails fast/visibly
+// instead of relying only on the server-side backstop.
+let _sendInFlight = false;
 document.getElementById('btn-send-selected').addEventListener('click', async () => {
+  if (_sendInFlight) { toast('A send is already in progress — please wait', 'error'); return; }
   if (selectedIds.size === 0) return;
   const ids = [...selectedIds];
   // Only allow ready contacts
@@ -850,19 +859,31 @@ document.getElementById('btn-send-selected').addEventListener('click', async () 
   const msg = `Send Email 1 to ${readyIds.length} contact(s)?` + (nonReady > 0 ? ` (${nonReady} skipped &mdash; already sent)` : '');
   const ok = await confirm('Send Emails', msg);
   if (!ok) return;
+
+  _sendInFlight = true;
+  const btn = document.getElementById('btn-send-selected');
+  btn.disabled = true;
   toast('Sending ' + readyIds.length + ' emails...');
   // Delegate to server &mdash; this reuses the same sendEmail action the dashboard uses
-  let sent = 0, failed = 0;
-  for (const id of readyIds) {
-    try {
-      const r = await api('POST', '/api/action', { action: 'sendEmail', contactId: id, emailNum: 1 });
-      if (r.success) sent++;
-      else failed++;
-    } catch { failed++; }
+  let sent = 0, failed = 0, duplicate = 0, stampFailed = 0;
+  try {
+    for (const id of readyIds) {
+      try {
+        const r = await api('POST', '/api/action', { action: 'sendEmail', contactId: id, emailNum: 1 });
+        if (r.success) { sent++; if (r.stampFailed) stampFailed++; }
+        else if (r.duplicate) duplicate++;
+        else failed++;
+      } catch { failed++; }
+    }
+  } finally {
+    _sendInFlight = false;
+    btn.disabled = false;
   }
   selectedIds.clear();
   if (sent > 0) toast(sent + ' email(s) sent!', 'success');
+  if (duplicate > 0) toast(duplicate + ' skipped as duplicates (already sent)', 'error');
   if (failed > 0) toast(failed + ' failed to send', 'error');
+  if (stampFailed > 0) toast(stampFailed + ' sent but DB status update failed — check these contacts manually to avoid a future duplicate send', 'error');
   setTimeout(loadData, 1500);
 });
 
