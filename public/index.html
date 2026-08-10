@@ -631,7 +631,7 @@ async function sendEmails() {
       dateField = 'email1_sent_at';
     } else if (filter === 'EMAIL_1_SENT_DUE') {
       subject = `Re: ${company} - a quick one`;
-      body = `Hi ${firstName},\n\nFollowing up in case this got buried. One client swapped occasional "we're hiring" posts for a steady stream of team events, project wins, and community work - customers, suppliers, and even job candidates started telling them it changed how they saw the company. Worth a quick look?\n\nIf social isn't a priority right now, no worries - just let me know and I'll stop following up.\n\nMike`;
+      body = `Hi ${firstName},\n\nFollowing up in case this got buried. One client's page used to be a brochure - the occasional "we're hiring" post and not much else. We took it over and started posting what was actually happening: project milestones, team celebrations, staff anniversaries, the community work they were already doing. Within weeks, customers and suppliers were mentioning it to them unprompted, and job candidates said it was part of why they wanted to work there. Nothing changed about the business - people just finally saw it. Worth a quick look?\n\nIf social isn't a priority right now, no worries - just let me know and I'll stop following up.\n\nMike`;
       newStatus = 'EMAIL_2_SENT';
       dateField = 'email2_sent_at';
     } else {
