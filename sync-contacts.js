@@ -182,11 +182,26 @@ function findNextConfig(state) {
 //                     list the default rotation uses)
 
 async function getCampaignSettings() {
-  const res = await supabaseRequest('GET', '/rest/v1/campaign_settings?id=eq.1&select=target_location,job_titles');
+  const res = await supabaseRequest('GET', '/rest/v1/campaign_settings?id=eq.1&select=target_location,job_titles,industry');
   if (res.status === 200 && Array.isArray(res.body) && res.body.length > 0) {
     return res.body[0];
   }
   return {};
+}
+
+// The Settings screen has always had an "Industry" field, but until now
+// nothing ever read it — syncCustom()/syncDefault() only ever passed
+// person_titles + person_locations to Apollo. That is the actual reason the
+// contact list is an unfiltered cross-section of every industry (credit
+// unions next to CNC shops next to funeral homes): there was never an
+// industry filter in the query, regardless of what was typed into Settings.
+// Comma-separated free text, e.g. "Construction, Plumbing, HVAC, Landscaping"
+// -> Apollo organization keyword tags.
+function parseIndustry(val) {
+  if (Array.isArray(val)) return val.filter(Boolean).length ? val.filter(Boolean) : null;
+  if (!val || !val.trim()) return null;
+  const parts = val.split(',').map(s => s.trim()).filter(Boolean);
+  return parts.length ? parts : null;
 }
 
 // campaign_settings.target_location / .job_titles are Postgres array columns
@@ -274,14 +289,14 @@ async function persistContacts(people) {
   return contacts.length;
 }
 
-async function syncCustom(locations, titles) {
-  const config = { label: `Settings: ${locations.join(' | ')}`, locations, titles };
+async function syncCustom(locations, titles, industries) {
+  const config = { label: `Settings: ${locations.join(' | ')}${industries ? ' | industries: ' + industries.join(', ') : ' | industries: NONE SET'}`, locations, titles, industries };
   let state = await getCustomState();
   if (!state.page) state.page = 1;
 
   console.log(`Custom config active (from app Settings): ${config.label} | Page: ${state.page}`);
 
-  const apolloData = await runSearch(config, {
+  const apolloParams = {
     api_key: APOLLO_KEY,
     person_titles: config.titles,
     person_locations: config.locations,
@@ -289,7 +304,12 @@ async function syncCustom(locations, titles) {
     contact_email_status: ['verified', 'likely to engage'],
     page: state.page,
     per_page: 45
-  });
+  };
+  if (industries && industries.length) {
+    apolloParams.q_organization_keyword_tags = industries;
+  }
+
+  const apolloData = await runSearch(config, apolloParams);
 
   if (!apolloData.people || apolloData.people.length === 0) {
     console.log(`⚠ No contacts found on page ${state.page} for this Settings target — wrapping back to page 1.`);
@@ -384,8 +404,12 @@ async function syncContacts() {
 
     if (customLocations) {
       const customTitles = parseTitles(settings.job_titles) || [...OWNER_TITLES, ...MANAGER_TITLES];
+      const customIndustries = parseIndustry(settings.industry);
+      if (!customIndustries) {
+        console.log(`⚠ Settings Industry field is blank — pulling with NO industry filter. This is the exact bug that produced an unsegmented list. Set Industry in Settings to fix.`);
+      }
       console.log(`Settings target_location is set — using custom config instead of default rotation.`);
-      await syncCustom(customLocations, customTitles);
+      await syncCustom(customLocations, customTitles, customIndustries);
     } else {
       console.log(`Settings target_location is blank — using default hardcoded rotation.`);
       await syncDefault();
