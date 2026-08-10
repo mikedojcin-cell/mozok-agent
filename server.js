@@ -380,6 +380,22 @@ app.post('/api/graph', async (req, res) => {
     const { to, body: emailBody, contactId } = req.body;
     const emailNum = req.body.emailNum || 1;
     if (!contactId) console.warn(`[sendEmail] WARNING: sending to ${to} with no contactId — this email will have NO open/click tracking pixel and cannot be attributed to a contact.`);
+
+    // ── Server-side idempotency guard ─────────────────────────────────────
+    // Root cause of duplicate sends: this endpoint used to trust the client's
+    // stale in-memory contact list to decide who was "ready". Two overlapping
+    // batch clicks (or a retry after a slow response) would both compute the
+    // same "ready" set and both call sendEmail for the same contact+emailNum.
+    // We now re-check the CURRENT DB state right before sending, and refuse
+    // to send again if this emailNum already has a sent timestamp.
+    if (contactId) {
+      const _guardRows = await supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=email${emailNum}_sent_at`).catch(() => []);
+      const _guard = (_guardRows || [])[0];
+      if (_guard && _guard[`email${emailNum}_sent_at`]) {
+        return res.json({ error: `Skipped: Email ${emailNum} was already sent to this contact at ${_guard[`email${emailNum}_sent_at`]}. Refusing duplicate send.`, duplicate: true });
+      }
+    }
+
     const [_sRows, _cRows] = await Promise.all([
       supabase('GET', '/rest/v1/campaign_settings?id=eq.1&select=email_subject_1,email_subject_2,email_subject_3'),
       contactId ? supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=firstname,company`) : Promise.resolve([])
@@ -415,7 +431,31 @@ app.post('/api/graph', async (req, res) => {
         saveToSentItems: true
       };
       const r = await graphCall(token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
-      if(r.status===202){const batchDate=new Date().toISOString().slice(0,10);const batchId=req.body.batch_id||batchDate+'_1';const emailNum=req.body.emailNum||1;if(contactId){await supabase('PATCH',`/rest/v1/contacts?id=eq.${contactId}`,{[`email${emailNum}_sent_at`]:new Date().toISOString(),status:`EMAIL_${emailNum}_SENT`,batch_id:batchId}).catch(e=>console.error('Batch stamp:',e.message));}return res.json({success:true,status:202,batch_id:batchId});}
+      if(r.status===202){
+        const batchDate=new Date().toISOString().slice(0,10);
+        const batchId=req.body.batch_id||batchDate+'_1';
+        let stampFailed = false;
+        if(contactId){
+          const stampBody = {[`email${emailNum}_sent_at`]:new Date().toISOString(),status:`EMAIL_${emailNum}_SENT`,batch_id:batchId};
+          // The email is already sent at this point — a failed stamp must NOT
+          // be silently swallowed, because that leaves the contact looking
+          // "never emailed" and the next batch run will re-send to them.
+          // Retry once, then surface it loudly if it still fails so the UI
+          // can warn Mike instead of quietly re-spamming the contact later.
+          try {
+            await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, stampBody);
+          } catch (e1) {
+            console.error('[sendEmail] Batch stamp FAILED, retrying:', e1.message);
+            try {
+              await supabase('PATCH', `/rest/v1/contacts?id=eq.${contactId}`, stampBody);
+            } catch (e2) {
+              stampFailed = true;
+              console.error(`[sendEmail] Batch stamp FAILED TWICE for contact ${contactId} — email was sent but DB was not updated. This contact WILL look unsent and risks a duplicate send. Manual fix required.`, e2.message);
+            }
+          }
+        }
+        return res.json({success:true,status:202,batch_id:batchId, stampFailed});
+      }
       return res.json({ error: (r.data?.error?.code ? '[' + r.data.error.code + '] ' : '') + (r.data?.error?.message || `Send failed (${r.status})`) });
     } catch(e) { return res.json({ error: e.message }); }
   }
