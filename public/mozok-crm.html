@@ -516,6 +516,18 @@ function getBucket(c) {
 
   if (c.status === 'BOUNCED') return 'bounced';
   if (hasClicked) return 'clicked';
+
+  // Trust the actual sent timestamps FIRST, before falling back to `status`.
+  // Found contacts live with email1_sent_at set (really emailed) but status
+  // still showing as if unsent — status had drifted out of sync with the
+  // timestamps. That made them show as "Ready to Send" again, and clicking
+  // send correctly got refused as a duplicate by the server, which looked
+  // like a wall of unexplained failures. A sent timestamp is ground truth:
+  // if it's set, this contact is not ready, no matter what status says.
+  if (c.email3_sent_at) return 'e3';
+  if (c.email2_sent_at) return e2days >= 7 ? 'e3due' : 'e2';
+  if (c.email1_sent_at) return e1days >= 7 ? 'e2due' : 'e1';
+
   if (c.status === 'EMAIL_3_SENT') return 'e3';
   if (c.status === 'EMAIL_2_SENT' && e2days >= 7) return 'e3due';
   if (c.status === 'EMAIL_2_SENT') return 'e2';
