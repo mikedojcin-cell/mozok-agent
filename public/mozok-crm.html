@@ -881,7 +881,11 @@ document.getElementById('btn-send-selected').addEventListener('click', async () 
   try {
     for (const id of readyIds) {
       try {
-        const r = await api('POST', '/api/action', { action: 'sendEmail', contactId: id, emailNum: 1 });
+        // Root cause of every "failed"/"errored out" report: this called a
+        // route that has never existed on the server (/api/action — the
+        // real route is /api/graph). Every attempt 404'd instantly, before
+        // any server-side logic ever ran. Fixed to hit the real endpoint.
+        const r = await api('POST', '/api/graph', { action: 'sendEmail', contactId: id, emailNum: 1 });
         if (r.success) { sent++; if (r.stampFailed) stampFailed++; }
         else if (r.duplicate) duplicate++;
         else failed++;
