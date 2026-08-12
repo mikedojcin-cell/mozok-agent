@@ -388,7 +388,8 @@ app.post('/api/graph', async (req, res) => {
   }
 
   if (action === 'sendEmail') {
-    const { to, body: emailBody, contactId } = req.body;
+    let { to, body: emailBody } = req.body;
+    const { contactId } = req.body;
     const emailNum = req.body.emailNum || 1;
     if (!contactId) console.warn(`[sendEmail] WARNING: sending to ${to} with no contactId — this email will have NO open/click tracking pixel and cannot be attributed to a contact.`);
 
@@ -409,13 +410,50 @@ app.post('/api/graph', async (req, res) => {
 
     const [_sRows, _cRows] = await Promise.all([
       supabase('GET', '/rest/v1/campaign_settings?id=eq.1&select=email_subject_1,email_subject_2,email_subject_3,daily_send_goal'),
-      contactId ? supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=firstname,company`) : Promise.resolve([])
+      contactId ? supabase('GET', `/rest/v1/contacts?id=eq.${contactId}&select=firstname,company,email`) : Promise.resolve([])
     ]);
     const _s = _sRows[0] || {}, _c = _cRows[0] || {};
-    const subject = (_s[`email_subject_${emailNum}`] || req.body.subject || 'Following up')
+
+    // ── Canonical email templates (server-authoritative) ──────────────────
+    // Root cause of "it errored out" sending from mozok-crm.html: that page's
+    // bulk-send button only ever posted { action, contactId, emailNum } — no
+    // `to`, no `body`. This handler used to trust the caller to supply both,
+    // so `emailBody.replace(...)` below threw on undefined for every single
+    // contact in that batch. index.html's sendEmails() built subject/body
+    // itself and always passed them, which is why sends from THAT page kept
+    // working while mozok-crm.html's kept failing — two UIs, two different
+    // behaviors, both silently drifting. Fixed by making the server the one
+    // source of truth: it now derives subject/body/recipient itself whenever
+    // the caller doesn't supply them, instead of assuming they're present.
+    const _firstName = _c.firstname || 'there';
+    const _company = _c.company || 'your business';
+    const _templates = {
+      1: {
+        subject: `${_company} — a quick one`,
+        body: `Hi ${_firstName},\n\nMost businesses I talk to know they should be posting consistently, but it never happens – no one owns it day to day.\n\nI run Mozok. I'll build ${_company} 3 sample social posts this week, free, using your actual business – no call, no pitch, just posts in your inbox by Friday so you can see if it's worth anything.\n\nWant them? Just reply "yes."\n\nMike\n248-800-3405`
+      },
+      2: {
+        subject: `Re: ${_company} — a quick one`,
+        body: `Hi ${_firstName},\n\nFollowing up in case this got buried. One client's page used to be a brochure - the occasional "we're hiring" post and not much else. We took it over and started posting what was actually happening: project milestones, team celebrations, staff anniversaries, the community work they were already doing. Within weeks, customers and suppliers were mentioning it to them unprompted, and job candidates said it was part of why they wanted to work there. Nothing changed about the business - people just finally saw it. Worth a quick look?\n\nIf social isn't a priority right now, no worries - just let me know and I'll stop following up.\n\nMike`
+      },
+      3: {
+        subject: `One idea for ${_company}`,
+        body: `Hi ${_firstName},\n\nLast thought, then I'll leave it – if you ever want a done-for-you posting schedule (3x/week, no contract, $497/mo), we're here: mozok.co\n\nEither way, wishing ${_company} a good rest of the year.\n\nMike`
+      }
+    };
+    const _template = _templates[emailNum] || _templates[1];
+
+    const subject = (_s[`email_subject_${emailNum}`] || req.body.subject || _template.subject)
       .replace(/\{\{firstname\}\}/gi, _c.firstname || '')
       .replace(/\{\{company\}\}/gi, _c.company || '')
       .trim();
+
+    // If the caller didn't supply a body (mozok-crm.html's case) or a `to`
+    // address, fall back to the canonical template / the contact's stored
+    // email instead of crashing on undefined further down.
+    if (!emailBody) emailBody = _template.body;
+    if (!to && _c.email) to = _c.email;
+    if (!to) return res.json({ error: 'No recipient email address available for this contact.' });
 
     // ── Hard daily send cap ──────────────────────────────────────────────
     // Cold-email deliverability data (see Mozok_Cold_Email_Sequence_v2.md)
