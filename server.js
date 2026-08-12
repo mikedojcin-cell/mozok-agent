@@ -349,7 +349,17 @@ app.get('/api/test-status/:contactId', requireAuth, async (req, res) => {
 // ─── GRAPH / SUPABASE API (protected) ───────────────────────────────────────────
 
 app.post('/api/graph', async (req, res) => {
-  const { tenantId, clientId, clientSecret, userEmail, action } = req.body;
+  const { action } = req.body;
+  // mozok-crm.html's send buttons don't have a Connect form and never had
+  // any way to supply Microsoft credentials — they were calling a
+  // nonexistent route (/api/action) so this never got exercised until that
+  // was fixed. Fall back to the same server-side credentials the test-send
+  // route already uses (mirrors the values hardcoded in index.html's
+  // Connect form) whenever the caller doesn't supply its own.
+  const tenantId = req.body.tenantId || process.env.TEST_SEND_TENANT_ID;
+  const clientId = req.body.clientId || process.env.TEST_SEND_CLIENT_ID;
+  const clientSecret = req.body.clientSecret || process.env.TEST_SEND_CLIENT_SECRET;
+  const userEmail = req.body.userEmail || process.env.TEST_SEND_USER_EMAIL || 'mike@mozok.co';
 
   if (action === 'getContacts') {
     const { status, offset = 0 } = req.body;  // ← offset added for pagination
