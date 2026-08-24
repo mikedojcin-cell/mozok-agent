@@ -438,13 +438,22 @@ app.post('/api/graph', async (req, res) => {
     const _firstName = _c.firstname || 'there';
     const _company = _c.company || 'your business';
     const _templates = {
+      // Rewritten Aug 24, 2026 — v1 of these templates was one generic body
+      // sent to every contact regardless of segment (the segmented rewrite in
+      // Mozok_Cold_Email_Sequence_v2.md was never actually wired in), leaned
+      // on a "most businesses..." line with zero specificity, had no
+      // credibility anchor (no mozok.co link until Email 3), and hedged its
+      // own offer ("so you can see if it's worth anything"). Email 2 also
+      // contained a fabricated client story — Mike confirmed no paying
+      // client exists to source it from. Replaced with the honest fallback
+      // his own strategy doc already proposed instead of inventing a result.
       1: {
-        subject: `${_company} — a quick one`,
-        body: `Hi ${_firstName},\n\nMost businesses I talk to know they should be posting consistently, but it never happens – no one owns it day to day.\n\nI run Mozok. I'll build ${_company} 3 sample social posts this week, free, using your actual business – no call, no pitch, just posts in your inbox by Friday so you can see if it's worth anything.\n\nWant them? Just reply "yes."\n\nMike\n248-800-3405`
+        subject: `${_firstName}, quick offer`,
+        body: `Hi ${_firstName},\n\nI build social content for small businesses around Michigan. This week I'm doing 3 free sample posts for ${_company} – using your actual business, no strings.\n\nYou'll have them in your inbox within 5 business days. If they're good, great, we can talk. If not, no hard feelings – I just spent some time making you some free content.\n\nWant them? Reply "yes" and I'll get started.\n\nMike\nmozok.co / 248-800-3405`
       },
       2: {
-        subject: `Re: ${_company} — a quick one`,
-        body: `Hi ${_firstName},\n\nFollowing up in case this got buried. One client's page used to be a brochure - the occasional "we're hiring" post and not much else. We took it over and started posting what was actually happening: project milestones, team celebrations, staff anniversaries, the community work they were already doing. Within weeks, customers and suppliers were mentioning it to them unprompted, and job candidates said it was part of why they wanted to work there. Nothing changed about the business - people just finally saw it. Worth a quick look?\n\nIf social isn't a priority right now, no worries - just let me know and I'll stop following up.\n\nMike`
+        subject: `Re: ${_firstName}, quick offer`,
+        body: `Hi ${_firstName},\n\nFollowing up in case this got buried. No contract, no cost upfront – you see the actual posts before you decide anything. That's the whole pitch. Worth a quick look?\n\nIf social isn't a priority right now, no worries – just let me know and I'll stop following up.\n\nMike`
       },
       3: {
         subject: `One idea for ${_company}`,
