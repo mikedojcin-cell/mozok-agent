@@ -97,6 +97,27 @@ async function supabase(method, endpoint, body) {
   });
 }
 
+// Pipeline was hardcoded to `limit=500&order=created_at.desc`, which silently
+// dropped every contact past the 500 newest — and the ones most likely to be
+// cut off are the OLDEST contacts, which are exactly the ones that have had
+// the most time to become E2/E3 due. That's a real, likely explanation for
+// follow-ups appearing missing: they weren't broken, they were never fetched.
+// Loops in pages of 1000 until Supabase returns a short page, so every
+// contact is included regardless of how large the table gets.
+async function fetchAllContacts(baseEndpoint) {
+  const pageSize = 1000;
+  let offset = 0;
+  let all = [];
+  while (true) {
+    const page = await supabase('GET', `${baseEndpoint}&limit=${pageSize}&offset=${offset}`);
+    if (!Array.isArray(page)) break;
+    all = all.concat(page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return all;
+}
+
 async function getToken(tenantId, clientId, clientSecret) {
   return new Promise((resolve, reject) => {
     const body = `grant_type=client_credentials&client_id=${clientId}&client_secret=${encodeURIComponent(clientSecret)}&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default`;
@@ -234,7 +255,7 @@ app.get('/track/open/:contactId', async (req, res) => {
 
 app.get('/api/pipeline', async (req, res) => {
   try {
-    const contacts = await supabase('GET', '/rest/v1/contacts?email=neq.&status=neq.REMOVED&status=neq.TEST&order=created_at.desc&limit=500&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at');
+    const contacts = await fetchAllContacts('/rest/v1/contacts?email=neq.&status=neq.REMOVED&status=neq.TEST&order=created_at.desc&select=id,firstname,lastname,email,company,status,email1_sent_at,email2_sent_at,email3_sent_at,last_opened_at,open_count,click_count,last_clicked_at');
     const now = Date.now();
     const pipeline = { ready:[], email1_sent:[], email2_due:[], email2_sent:[], email3_due:[], email3_sent:[], clicked:[], bounced:[] };
     if (!Array.isArray(contacts)) return res.json({ error: contacts?.message || 'Supabase error', pipeline: {}, total: 0, batch_stats: [], sent_today: 0 });
