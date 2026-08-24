@@ -546,12 +546,12 @@ function getNextAction(c, bucket) {
       const left = 7 - e1days;
       return { label: `E2 in ${Math.ceil(left)}d`, cls: 'waiting', days: left };
     }
-    case 'e2due':    return { label: 'Send Email 2 Now', cls: 'urgent', days: -1 };
+    case 'e2due':    return { label: 'Send Email 2 Now', cls: 'urgent', days: -1, emailNum: 2 };
     case 'e2': {
       const left = 7 - e2days;
       return { label: `E3 in ${Math.ceil(left)}d`, cls: 'waiting', days: left };
     }
-    case 'e3due':    return { label: 'Send Email 3 Now', cls: 'urgent', days: -2 };
+    case 'e3due':    return { label: 'Send Email 3 Now', cls: 'urgent', days: -2, emailNum: 3 };
     case 'e3':       return { label: 'Sequence done', cls: 'done', days: 999 };
     case 'clicked':  return { label: '&#x1F525; High intent', cls: 'send-now', days: -99 };
     case 'bounced':  return { label: 'Bounced', cls: 'bounce', days: 9999 };
@@ -653,7 +653,9 @@ function render() {
       <td class="col-e2">${c.email2_sent_at ? `<span class="date-sent">${fmtDate(c.email2_sent_at)}</span>` : `<span class="date-sent empty">&mdash;</span>`}</td>
       <td class="col-e3">${c.email3_sent_at ? `<span class="date-sent">${fmtDate(c.email3_sent_at)}</span>` : `<span class="date-sent empty">&mdash;</span>`}</td>
       <td class="col-opened">${opened ? `<span class="opened-yes" title="${c.open_count} open(s)">&#x2713;</span>` : `<span class="opened-no">&mdash;</span>`}</td>
-      <td class="col-next"><span class="next-action ${na.cls}">${na.label}</span></td>
+      <td class="col-next">${na.emailNum
+        ? `<span class="next-action ${na.cls}" data-emailnum="${na.emailNum}" title="Click to send Email ${na.emailNum} now" style="cursor:pointer;text-decoration:underline;text-underline-offset:2px">${na.label}</span>`
+        : `<span class="next-action ${na.cls}">${na.label}</span>`}</td>
     </tr>`;
   }).join('');
   tbody.innerHTML = rows;
@@ -901,6 +903,48 @@ document.getElementById('btn-send-selected').addEventListener('click', async () 
   if (failed > 0) toast(failed + ' failed to send', 'error');
   if (stampFailed > 0) toast(stampFailed + ' sent but DB status update failed — check these contacts manually to avoid a future duplicate send', 'error');
   setTimeout(loadData, 1500);
+});
+
+// -- SEND FOLLOW-UP (EMAIL 2 / EMAIL 3) — per-contact click-to-send ------------
+// Root cause of "the CRM won't let me send email 2 or 3": the "Send Email 2/3
+// Now" text in the Next Action column was a plain label with getNextAction()
+// but no click handler and no button anywhere — only Email 1 had a wired
+// send path (btn-send-selected, hardcoded to emailNum:1). This delegated
+// listener on the (never-replaced) tbody element makes the urgent label
+// itself clickable and routes it through the same /api/graph sendEmail
+// action, emailNum taken from na.emailNum set in getNextAction().
+document.getElementById('tbody').addEventListener('click', async (e) => {
+  const el = e.target.closest('.next-action.urgent[data-emailnum]');
+  if (!el) return;
+  const row = el.closest('tr');
+  const id = row?.dataset.id;
+  const emailNum = Number(el.dataset.emailnum);
+  if (!id || !emailNum) return;
+  const c = allContacts.find(c => c.id === id);
+  if (!c) return;
+
+  const ok = await confirm(`Send Email ${emailNum}`, `Send follow-up Email ${emailNum} to ${c.firstname || c.email || 'this contact'} (${c.company || 'no company'})?`);
+  if (!ok) return;
+
+  const original = el.textContent;
+  el.textContent = 'Sending…';
+  el.style.pointerEvents = 'none';
+  try {
+    const r = await api('POST', '/api/graph', { action: 'sendEmail', contactId: id, emailNum });
+    if (r.success) {
+      toast(`Email ${emailNum} sent to ${c.firstname || c.email}`, 'success');
+      if (r.stampFailed) toast('Sent, but DB status update failed — check this contact manually', 'error');
+    } else if (r.duplicate) {
+      toast('Already sent — skipped as duplicate', 'error');
+    } else if (r.capReached) {
+      toast(r.error, 'error');
+    } else {
+      toast(r.error || 'Send failed', 'error');
+    }
+  } catch (err) {
+    toast('Send failed: ' + err.message, 'error');
+  }
+  setTimeout(loadData, 1000);
 });
 
 // -- BOUNCE CHECK --------------------------------------------------------------
