@@ -85,6 +85,27 @@ window.fetch=function(u,o){
     <table><tbody id="winbackBody"></tbody></table>
   </div>
 
+  <div class="section" id="selfSourcedSection">
+    <h2>Self-sourced prospects (found manually, not from any list)</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:14px;align-items:end;">
+      <div>
+        <label style="font-size:12px;color:#888;">Company name</label>
+        <input id="ms-name" placeholder="Company name" style="width:100%;" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:#888;">Contact name</label>
+        <input id="ms-contact-name" placeholder="Contact name" style="width:100%;" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:#888;">Contact email</label>
+        <input id="ms-contact-email" placeholder="Contact email" style="width:100%;" />
+      </div>
+      <button id="ms-add">Add prospect</button>
+    </div>
+    <textarea id="ms-note" placeholder="How you found them / why they're a fit..." style="width:100%;margin-bottom:10px;"></textarea>
+    <table><tbody id="selfSourcedBody"></tbody></table>
+  </div>
+
   <div class="section" id="prospectSection">
     <h2>Step 3 — New prospects (Apollo)</h2>
     <p style="font-size:12px;color:#888;margin-bottom:10px;">Defined here, not run yet. Win-back and sister-location come first — flip Active on when those are exhausted.</p>
@@ -176,8 +197,10 @@ function rowHtml(a) {
 function render() {
   const sister = ACCOUNTS.filter(a => a.play_group === 'sister');
   const winback = ACCOUNTS.filter(a => a.play_group === 'winback');
+  const selfSourced = ACCOUNTS.filter(a => a.play_group === 'self_sourced');
   document.getElementById('sisterBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + sister.map(rowHtml).join('');
   document.getElementById('winbackBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + winback.map(rowHtml).join('');
+  document.getElementById('selfSourcedBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + (selfSourced.length ? selfSourced.map(rowHtml).join('') : '');
   document.getElementById('sisterSection').style.display = '';
   document.getElementById('winbackSection').style.display = '';
   document.getElementById('loading').style.display = 'none';
@@ -276,6 +299,25 @@ async function load() {
   }
 }
 load();
+
+document.getElementById('ms-add').addEventListener('click', async () => {
+  const name = document.getElementById('ms-name').value.trim();
+  const contact_name = document.getElementById('ms-contact-name').value.trim();
+  const contact_email = document.getElementById('ms-contact-email').value.trim();
+  const note = document.getElementById('ms-note').value.trim();
+  if (!name) return;
+  const r = await fetch('/api/awd/accounts/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, contact_name, contact_email, note }) });
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  if (d.account) {
+    ACCOUNTS.push(d.account);
+    document.getElementById('ms-name').value = '';
+    document.getElementById('ms-contact-name').value = '';
+    document.getElementById('ms-contact-email').value = '';
+    document.getElementById('ms-note').value = '';
+    render();
+  }
+});
 
 async function loadCriteria() {
   try {
