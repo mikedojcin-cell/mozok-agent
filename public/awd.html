@@ -1,0 +1,181 @@
+<script>
+(function(){
+var SB='https://kwyycykglqrokqsbuiny.supabase.co';
+var AK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3eXljeWtnbHFyb2txc2J1aW55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2Nzk5MTksImV4cCI6MjA5NDI1NTkxOX0.pw2ej0U3xgd-i-1Xub_jWq7iI5RZC7N4f43jFSc9DfM';
+var t=localStorage.getItem('mozok_token');
+var _f=window.fetch;
+function exp(tok){try{var p=JSON.parse(atob(tok.split('.')[1]));return p.exp<Math.floor(Date.now()/1000);}catch(e){return true;}}
+async function refresh(){
+  var r=localStorage.getItem('mozok_refresh');if(!r)return null;
+  try{
+    var res=await _f(SB+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'Content-Type':'application/json','apikey':AK},body:JSON.stringify({refresh_token:r})});
+    var d=await res.json();
+    if(d.access_token){localStorage.setItem('mozok_token',d.access_token);localStorage.setItem('mozok_refresh',d.refresh_token||r);t=d.access_token;return d.access_token;}
+  }catch(e){}
+  return null;
+}
+window.fetch=function(u,o){
+  o=o||{};
+  if(typeof u==='string'&&u.includes('/api/')){o.headers=Object.assign({},o.headers,{'Authorization':'Bearer '+t});}
+  return _f(u,o).then(function(res){
+    if(res.status===401&&typeof u==='string'&&u.includes('/api/')){
+      return refresh().then(function(nt){
+        if(nt){var o2={method:o.method,headers:Object.assign({},o.headers,{'Authorization':'Bearer '+nt}),body:o.body};return _f(u,o2);}
+        localStorage.removeItem('mozok_token');window.location.href='/login.html?redirect=/awd.html';return res;
+      });
+    }
+    return res;
+  });
+};
+(async function(){
+  if(!t||exp(t)){var nt=await refresh();if(!nt){localStorage.removeItem('mozok_token');window.location.href='/login.html?redirect=/awd.html';}}
+})();
+})();
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mozok — AWD Outreach Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{--moz:#1D9E75;--bg:#f9f9f8;--surface:#fff;--border:rgba(0,0,0,.1);--text:#1a1a18;--text-2:#5f5e5a;--text-3:#888780;}
+  body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);padding:0 0 3rem;}
+  .app{max-width:1000px;margin:0 auto;padding:0 1.5rem;}
+  .header{display:flex;align-items:center;justify-content:space-between;padding:1.25rem 0;border-bottom:.5px solid var(--border);margin-bottom:1.5rem;}
+  .logo{font-size:20px;font-weight:600;color:var(--moz);}
+  .logo span{color:var(--text-3);font-weight:400;font-size:13px;margin-left:8px;}
+  a.back{font-size:13px;color:var(--text-2);text-decoration:none;}
+  .section{background:var(--surface);border:.5px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;}
+  .section h2{font-size:15px;margin-bottom:10px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid #eee;vertical-align:top;}
+  th{color:var(--text-3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em;}
+  select,textarea{font-family:inherit;font-size:13px;padding:5px 7px;border:1px solid #ccc;border-radius:6px;width:100%;}
+  textarea{min-height:34px;resize:vertical;}
+  .acct-name{font-weight:600;}
+  .acct-note{color:#777;font-size:12px;}
+  button{background:var(--moz);color:#fff;border:none;border-radius:7px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;margin-top:6px;}
+  button:hover{opacity:.9;}
+  .save-msg{font-size:12px;color:#167a3d;margin-left:8px;opacity:0;transition:opacity .2s;}
+  .save-msg.show{opacity:1;}
+  .hist{font-size:12px;color:#555;}
+  .hist div{padding:3px 0;border-top:1px dashed #eee;}
+  .loading{color:var(--text-3);font-size:13px;padding:20px 0;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div><span class="logo">Mozok</span><span style="color:var(--text-3);font-size:13px;margin-left:8px;">AWD Outreach Tracker</span></div>
+    <a class="back" href="/dashboard.html">&larr; Dashboard</a>
+  </div>
+
+  <div id="loading" class="loading">Loading accounts…</div>
+
+  <div class="section" id="sisterSection" style="display:none;">
+    <h2>Sister-location leads</h2>
+    <table><tbody id="sisterBody"></tbody></table>
+  </div>
+
+  <div class="section" id="winbackSection" style="display:none;">
+    <h2>Win-back accounts (lapsed, credit on file, no sales this period)</h2>
+    <table><tbody id="winbackBody"></tbody></table>
+  </div>
+
+  <div id="errorBox" style="display:none;color:#b3261e;font-size:13px;"></div>
+</div>
+
+<script>
+let ACCOUNTS = [];
+let LOGS = {};
+
+function historyFor(id) {
+  return (LOGS[id] || []).slice().sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+}
+
+function rowHtml(a) {
+  const hist = historyFor(a.id);
+  const histHtml = hist.length
+    ? hist.map(h => `<div><strong>${new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> — ${h.note}</div>`).join('')
+    : '<div style="color:#aaa;">No entries yet</div>';
+  return `<tr>
+    <td style="width:24%"><div class="acct-name">${a.name}</div><div class="acct-note">${a.note || ''}</div></td>
+    <td style="width:12%">
+      <select data-account="${a.id}" class="status-select">
+        <option value="not_started">Not started</option>
+        <option value="attempted">Attempted</option>
+        <option value="responded">Responded</option>
+        <option value="converted">Converted</option>
+        <option value="do_not_contact">Do not contact</option>
+      </select>
+    </td>
+    <td style="width:28%">
+      <textarea data-account="${a.id}" placeholder="Log this interaction..."></textarea>
+      <button data-account="${a.id}" class="log-btn">Save entry</button>
+      <span class="save-msg" data-account-msg="${a.id}">Saved</span>
+    </td>
+    <td style="width:36%"><div class="hist" data-account-hist="${a.id}">${histHtml}</div></td>
+  </tr>`;
+}
+
+function render() {
+  const sister = ACCOUNTS.filter(a => a.play_group === 'sister');
+  const winback = ACCOUNTS.filter(a => a.play_group === 'winback');
+  document.getElementById('sisterBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + sister.map(rowHtml).join('');
+  document.getElementById('winbackBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + winback.map(rowHtml).join('');
+  document.getElementById('sisterSection').style.display = '';
+  document.getElementById('winbackSection').style.display = '';
+  document.getElementById('loading').style.display = 'none';
+
+  ACCOUNTS.forEach(a => {
+    const sel = document.querySelector(`select[data-account="${a.id}"]`);
+    if (!sel) return;
+    sel.value = a.status;
+    sel.addEventListener('change', async () => {
+      await fetch('/api/awd/accounts/' + a.id + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: sel.value }) });
+      a.status = sel.value;
+    });
+  });
+  document.querySelectorAll('.log-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-account');
+      const ta = document.querySelector(`textarea[data-account="${id}"]`);
+      const note = ta.value.trim();
+      if (!note) return;
+      const r = await fetch('/api/awd/accounts/' + id + '/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note }) });
+      const d = await r.json();
+      if (d.entry) {
+        LOGS[id] = LOGS[id] || [];
+        LOGS[id].push(d.entry);
+        ta.value = '';
+        document.querySelector(`[data-account-hist="${id}"]`).innerHTML = historyFor(id).map(h => `<div><strong>${new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> — ${h.note}</div>`).join('');
+        const msg = document.querySelector(`[data-account-msg="${id}"]`);
+        msg.classList.add('show');
+        setTimeout(() => msg.classList.remove('show'), 1200);
+      }
+    });
+  });
+}
+
+async function load() {
+  try {
+    const r = await fetch('/api/awd/accounts');
+    const d = await r.json();
+    if (d.error) { document.getElementById('errorBox').style.display = ''; document.getElementById('errorBox').textContent = d.error; document.getElementById('loading').style.display = 'none'; return; }
+    ACCOUNTS = d.accounts || [];
+    LOGS = {};
+    (d.logs || []).forEach(l => { LOGS[l.account_id] = LOGS[l.account_id] || []; LOGS[l.account_id].push(l); });
+    render();
+  } catch (e) {
+    document.getElementById('errorBox').style.display = '';
+    document.getElementById('errorBox').textContent = 'Failed to load: ' + e.message;
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+load();
+</script>
+</body>
+</html>
