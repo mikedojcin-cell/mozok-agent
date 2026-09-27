@@ -140,8 +140,13 @@ window.fetch=function(u,o){
     <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
       <label style="font-size:13px;"><input type="checkbox" id="pc-active" /> Active (runs the Apollo pull)</label>
       <button id="pc-save">Save criteria</button>
+      <button id="pc-pull" style="background:#0b5cab;">Pull prospects now</button>
       <span class="save-msg" id="pc-save-msg">Saved</span>
     </div>
+    <div id="pull-status" style="font-size:13px;color:#888;margin-top:8px;"></div>
+    <table style="margin-top:14px;">
+      <tbody id="prospectsBody"></tbody>
+    </table>
   </div>
 
   <div id="errorBox" style="display:none;color:#b3261e;font-size:13px;"></div>
@@ -334,6 +339,40 @@ async function loadCriteria() {
   } catch (e) {}
 }
 loadCriteria();
+
+function renderProspects(list) {
+  const body = document.getElementById('prospectsBody');
+  if (!list.length) { body.innerHTML = '<tr><td style="color:#aaa;font-size:13px;">No prospects pulled yet.</td></tr>'; return; }
+  body.innerHTML = `<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Location</th></tr>` +
+    list.map(p => `<tr>
+      <td>${p.firstname} ${p.lastname}</td>
+      <td>${p.company || ''}</td>
+      <td>${p.email || ''}</td>
+      <td>${p.phone || ''}</td>
+      <td>${[p.city, p.state].filter(Boolean).join(', ')}</td>
+    </tr>`).join('');
+}
+
+async function loadProspects() {
+  const r = await fetch('/api/awd/prospects');
+  const d = await r.json();
+  renderProspects(d.prospects || []);
+}
+loadProspects();
+
+document.getElementById('pc-pull').addEventListener('click', async () => {
+  const btn = document.getElementById('pc-pull');
+  const status = document.getElementById('pull-status');
+  btn.disabled = true; btn.textContent = 'Pulling from Apollo...';
+  status.textContent = '';
+  const r = await fetch('/api/awd/prospects/pull', { method: 'POST' });
+  const d = await r.json();
+  btn.disabled = false; btn.textContent = 'Pull prospects now';
+  if (d.error) { status.style.color = '#b3261e'; status.textContent = d.error; return; }
+  status.style.color = '#167a3d';
+  status.textContent = d.message || '';
+  loadProspects();
+});
 
 document.getElementById('pc-save').addEventListener('click', async () => {
   const payload = {
