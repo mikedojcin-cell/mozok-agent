@@ -136,6 +136,10 @@ window.fetch=function(u,o){
           <input id="pc-size-max" type="number" style="width:100%;" />
         </div>
       </div>
+      <div style="grid-column:1/-1;">
+        <label style="font-size:12px;color:#888;">Apollo API key (stored in the database, paste your own here)</label>
+        <input id="pc-apollo-key" type="password" placeholder="Leave blank to keep the current saved key" style="width:100%;" />
+      </div>
     </div>
     <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
       <label style="font-size:13px;"><input type="checkbox" id="pc-active" /> Active (runs the Apollo pull)</label>
@@ -382,9 +386,11 @@ document.getElementById('pc-save').addEventListener('click', async () => {
     locations: document.getElementById('pc-locations').value.trim(),
     company_size_min: parseInt(document.getElementById('pc-size-min').value) || 1,
     company_size_max: parseInt(document.getElementById('pc-size-max').value) || 200,
-    active: document.getElementById('pc-active').checked
+    active: document.getElementById('pc-active').checked,
+    apollo_key: document.getElementById('pc-apollo-key').value.trim()
   };
   await fetch('/api/awd/prospect-criteria', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  document.getElementById('pc-apollo-key').value = '';
   const msg = document.getElementById('pc-save-msg');
   msg.classList.add('show');
   setTimeout(() => msg.classList.remove('show'), 1200);
