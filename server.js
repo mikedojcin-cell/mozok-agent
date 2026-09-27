@@ -937,13 +937,17 @@ app.post('/api/awd/prospects/pull', requireAuth, async (req, res) => {
       enriched.push(...(matchResult.matches || []));
     }
     const emailMap = {};
-    enriched.forEach(m => { if (m.id && m.email) emailMap[m.id] = m.email; });
+    const titleMap = {};
+    enriched.forEach(m => {
+      if (m.id && m.email) emailMap[m.id] = m.email;
+      if (m.id && m.title) titleMap[m.id] = m.title;
+    });
 
     const prospects = people.filter(p => emailMap[p.id]).map(p => ({
       apollo_id: p.id,
       firstname: p.first_name || '',
       lastname: p.last_name || '',
-      title: p.title || '',
+      title: titleMap[p.id] || p.title || '',
       email: emailMap[p.id],
       company: p.organization ? p.organization.name : '',
       phone: (p.phone_numbers && p.phone_numbers[0]) ? p.phone_numbers[0].raw_number : '',
