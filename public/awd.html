@@ -85,6 +85,44 @@ window.fetch=function(u,o){
     <table><tbody id="winbackBody"></tbody></table>
   </div>
 
+  <div class="section" id="prospectSection">
+    <h2>Step 3 — New prospects (Apollo)</h2>
+    <p style="font-size:12px;color:#888;margin-bottom:10px;">Defined here, not run yet. Win-back and sister-location come first — flip Active on when those are exhausted.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div style="grid-column:1/-1;">
+        <label style="font-size:12px;color:#888;">Target profile (who's the ideal new customer)</label>
+        <textarea id="pc-profile" placeholder="e.g. CNC machine shops and tool & die shops, 10-200 employees, in-house carbide drill usage" style="width:100%;min-height:50px;"></textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#888;">Industries (comma-separated)</label>
+        <input id="pc-industries" placeholder="Machining, Tool & Die, Metal Fabrication" style="width:100%;" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:#888;">Job titles (comma-separated)</label>
+        <input id="pc-titles" placeholder="Owner, Purchasing Manager, Operations Manager" style="width:100%;" />
+      </div>
+      <div>
+        <label style="font-size:12px;color:#888;">Locations (semicolon-separated)</label>
+        <input id="pc-locations" placeholder="Ontario, Canada; Michigan, United States" style="width:100%;" />
+      </div>
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;">
+          <label style="font-size:12px;color:#888;">Company size min</label>
+          <input id="pc-size-min" type="number" style="width:100%;" />
+        </div>
+        <div style="flex:1;">
+          <label style="font-size:12px;color:#888;">Company size max</label>
+          <input id="pc-size-max" type="number" style="width:100%;" />
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+      <label style="font-size:13px;"><input type="checkbox" id="pc-active" /> Active (runs the Apollo pull)</label>
+      <button id="pc-save">Save criteria</button>
+      <span class="save-msg" id="pc-save-msg">Saved</span>
+    </div>
+  </div>
+
   <div id="errorBox" style="display:none;color:#b3261e;font-size:13px;"></div>
 </div>
 
@@ -238,6 +276,38 @@ async function load() {
   }
 }
 load();
+
+async function loadCriteria() {
+  try {
+    const r = await fetch('/api/awd/prospect-criteria');
+    const d = await r.json();
+    const c = d.criteria || {};
+    document.getElementById('pc-profile').value = c.target_profile || '';
+    document.getElementById('pc-industries').value = c.industries || '';
+    document.getElementById('pc-titles').value = c.job_titles || '';
+    document.getElementById('pc-locations').value = c.locations || '';
+    document.getElementById('pc-size-min').value = c.company_size_min || 1;
+    document.getElementById('pc-size-max').value = c.company_size_max || 200;
+    document.getElementById('pc-active').checked = !!c.active;
+  } catch (e) {}
+}
+loadCriteria();
+
+document.getElementById('pc-save').addEventListener('click', async () => {
+  const payload = {
+    target_profile: document.getElementById('pc-profile').value.trim(),
+    industries: document.getElementById('pc-industries').value.trim(),
+    job_titles: document.getElementById('pc-titles').value.trim(),
+    locations: document.getElementById('pc-locations').value.trim(),
+    company_size_min: parseInt(document.getElementById('pc-size-min').value) || 1,
+    company_size_max: parseInt(document.getElementById('pc-size-max').value) || 200,
+    active: document.getElementById('pc-active').checked
+  };
+  await fetch('/api/awd/prospect-criteria', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+  const msg = document.getElementById('pc-save-msg');
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 1200);
+});
 </script>
 </body>
 </html>
