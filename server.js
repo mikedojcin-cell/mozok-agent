@@ -843,6 +843,86 @@ app.get('/awd.html', (req, res) => res.sendFile(path.join(__dirname, 'public', '
 // email-send pipeline. Same requireAuth as everything else: any logged-in
 // Mozok user (i.e. Mike) can use it, no separate login system needed.
 
+function apolloRequestServer(path, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const req2 = https.request({
+      hostname: 'api.apollo.io', path, method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': process.env.APOLLO_KEY }
+    }, (res2) => {
+      let b = ''; res2.on('data', c => b += c);
+      res2.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { reject(e); } });
+    });
+    req2.on('error', reject);
+    req2.write(data);
+    req2.end();
+  });
+}
+
+app.get('/api/awd/prospects', requireAuth, async (req, res) => {
+  try {
+    const rows = await supabase('GET', '/rest/v1/awd_prospects?select=*&order=created_at.desc&limit=200');
+    res.json({ prospects: rows || [] });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+app.post('/api/awd/prospects/pull', requireAuth, async (req, res) => {
+  if (!process.env.APOLLO_KEY) return res.json({ error: 'APOLLO_KEY not configured on this server.' });
+  try {
+    const rows = await supabase('GET', '/rest/v1/awd_prospect_criteria?id=eq.1&select=*');
+    const c = (rows || [])[0];
+    if (!c || !c.active) return res.json({ error: 'Prospect criteria is not active.' });
+
+    const industries = (c.industries || '').split(',').map(s => s.trim()).filter(Boolean);
+    const titles = (c.job_titles || '').split(',').map(s => s.trim()).filter(Boolean);
+    const locations = (c.locations || '').split(';').map(s => s.trim()).filter(Boolean);
+
+    const apolloParams = {
+      api_key: process.env.APOLLO_KEY,
+      person_titles: titles.length ? titles : undefined,
+      person_locations: locations.length ? locations : undefined,
+      organization_num_employees_ranges: [`${c.company_size_min || 1},${c.company_size_max || 200}`],
+      contact_email_status: ['verified', 'likely to engage'],
+      page: 1, per_page: 25
+    };
+    if (industries.length) apolloParams.q_organization_keyword_tags = industries;
+
+    const apolloData = await apolloRequestServer('/v1/mixed_people/api_search', apolloParams);
+    const people = apolloData.people || [];
+    if (!people.length) return res.json({ prospects: [], message: 'Apollo returned 0 results for this criteria.' });
+
+    // Enrich for verified emails, same pattern as sync-contacts.js
+    const enriched = [];
+    for (let i = 0; i < people.length; i += 10) {
+      const batch = people.slice(i, i + 10).map(p => ({ id: p.id, first_name: p.first_name, last_name: p.last_name || '', organization_name: p.organization ? p.organization.name : '' }));
+      const matchResult = await apolloRequestServer('/v1/people/bulk_match', { api_key: process.env.APOLLO_KEY, details: batch, reveal_personal_emails: false });
+      enriched.push(...(matchResult.matches || []));
+    }
+    const emailMap = {};
+    enriched.forEach(m => { if (m.id && m.email) emailMap[m.id] = m.email; });
+
+    const prospects = people.filter(p => emailMap[p.id]).map(p => ({
+      apollo_id: p.id,
+      firstname: p.first_name || '',
+      lastname: p.last_name || '',
+      email: emailMap[p.id],
+      company: p.organization ? p.organization.name : '',
+      phone: (p.phone_numbers && p.phone_numbers[0]) ? p.phone_numbers[0].raw_number : '',
+      city: p.city || '', state: p.state || '', country: p.country || '',
+      status: 'new'
+    }));
+
+    if (prospects.length) {
+      await supabase('POST', '/rest/v1/awd_prospects?on_conflict=apollo_id', prospects);
+    }
+    res.json({ prospects, message: `Pulled ${people.length}, ${prospects.length} with verified emails.` });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
 app.get('/api/awd/prospect-criteria', requireAuth, async (req, res) => {
   try {
     const rows = await supabase('GET', '/rest/v1/awd_prospect_criteria?id=eq.1&select=*');
