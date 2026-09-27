@@ -96,14 +96,22 @@ function historyFor(id) {
   return (LOGS[id] || []).slice().sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
+const CHANNELS = ['note','phone','email','text','linkedin','facebook','instagram'];
+const CHANNEL_LABEL = { note:'Note', phone:'Phone', email:'Email', text:'Text', linkedin:'LinkedIn', facebook:'Facebook', instagram:'Instagram' };
+
 function rowHtml(a) {
   const hist = historyFor(a.id);
   const histHtml = hist.length
-    ? hist.map(h => `<div><strong>${new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> — ${h.note}</div>`).join('')
+    ? hist.map(h => `<div><strong>${new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> [${CHANNEL_LABEL[h.channel]||'Note'}] — ${h.note}</div>`).join('')
     : '<div style="color:#aaa;">No entries yet</div>';
+  const channelOptions = CHANNELS.map(c => `<option value="${c}">${CHANNEL_LABEL[c]}</option>`).join('');
   return `<tr>
-    <td style="width:24%"><div class="acct-name">${a.name}</div><div class="acct-note">${a.note || ''}</div></td>
-    <td style="width:12%">
+    <td style="width:20%">
+      <div class="acct-name">${a.name}</div><div class="acct-note">${a.note || ''}</div>
+      <input data-contact-name="${a.id}" placeholder="Contact name" value="${a.contact_name || ''}" style="margin-top:6px;" />
+      <input data-contact-email="${a.id}" placeholder="Contact email" value="${a.contact_email || ''}" style="margin-top:4px;" />
+    </td>
+    <td style="width:10%">
       <select data-account="${a.id}" class="status-select">
         <option value="not_started">Not started</option>
         <option value="attempted">Attempted</option>
@@ -112,12 +120,18 @@ function rowHtml(a) {
         <option value="do_not_contact">Do not contact</option>
       </select>
     </td>
-    <td style="width:28%">
+    <td style="width:32%">
+      <select data-channel="${a.id}" class="channel-select" style="margin-bottom:4px;">${channelOptions}</select>
       <textarea data-account="${a.id}" placeholder="Log this interaction..."></textarea>
       <button data-account="${a.id}" class="log-btn">Save entry</button>
       <span class="save-msg" data-account-msg="${a.id}">Saved</span>
+      <div style="margin-top:8px;border-top:1px dashed #eee;padding-top:8px;">
+        <input data-email-subject="${a.id}" placeholder="Email subject" style="margin-bottom:4px;" />
+        <textarea data-email-body="${a.id}" placeholder="Email body..."></textarea>
+        <button data-account="${a.id}" class="send-email-btn" style="background:#0b5cab;">Send email (auto-logs)</button>
+      </div>
     </td>
-    <td style="width:36%"><div class="hist" data-account-hist="${a.id}">${histHtml}</div></td>
+    <td style="width:38%"><div class="hist" data-account-hist="${a.id}">${histHtml}</div></td>
   </tr>`;
 }
 
@@ -130,6 +144,16 @@ function render() {
   document.getElementById('winbackSection').style.display = '';
   document.getElementById('loading').style.display = 'none';
 
+  function refreshHist(id) {
+    document.querySelector(`[data-account-hist="${id}"]`).innerHTML = historyFor(id).map(h => `<div><strong>${new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> [${CHANNEL_LABEL[h.channel]||'Note'}] — ${h.note}</div>`).join('') || '<div style="color:#aaa;">No entries yet</div>';
+  }
+  function flashSaved(id) {
+    const msg = document.querySelector(`[data-account-msg="${id}"]`);
+    if (!msg) return;
+    msg.classList.add('show');
+    setTimeout(() => msg.classList.remove('show'), 1200);
+  }
+
   ACCOUNTS.forEach(a => {
     const sel = document.querySelector(`select[data-account="${a.id}"]`);
     if (!sel) return;
@@ -138,23 +162,61 @@ function render() {
       await fetch('/api/awd/accounts/' + a.id + '/status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: sel.value }) });
       a.status = sel.value;
     });
+
+    // Contact name/email — save on blur, no separate button needed
+    const nameInput = document.querySelector(`input[data-contact-name="${a.id}"]`);
+    const emailInput = document.querySelector(`input[data-contact-email="${a.id}"]`);
+    async function saveContact() {
+      await fetch('/api/awd/accounts/' + a.id + '/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_name: nameInput.value.trim(), contact_email: emailInput.value.trim() }) });
+      a.contact_name = nameInput.value.trim();
+      a.contact_email = emailInput.value.trim();
+    }
+    nameInput.addEventListener('blur', saveContact);
+    emailInput.addEventListener('blur', saveContact);
   });
+
   document.querySelectorAll('.log-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-account');
       const ta = document.querySelector(`textarea[data-account="${id}"]`);
+      const channelSel = document.querySelector(`select[data-channel="${id}"]`);
       const note = ta.value.trim();
       if (!note) return;
-      const r = await fetch('/api/awd/accounts/' + id + '/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note }) });
+      const r = await fetch('/api/awd/accounts/' + id + '/log', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ note, channel: channelSel.value }) });
       const d = await r.json();
       if (d.entry) {
         LOGS[id] = LOGS[id] || [];
         LOGS[id].push(d.entry);
         ta.value = '';
-        document.querySelector(`[data-account-hist="${id}"]`).innerHTML = historyFor(id).map(h => `<div><strong>${new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> — ${h.note}</div>`).join('');
-        const msg = document.querySelector(`[data-account-msg="${id}"]`);
-        msg.classList.add('show');
-        setTimeout(() => msg.classList.remove('show'), 1200);
+        refreshHist(id);
+        flashSaved(id);
+      }
+    });
+  });
+
+  // Send email — this IS the interaction, so it logs itself. No manual note after.
+  document.querySelectorAll('.send-email-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-account');
+      const subjectInput = document.querySelector(`input[data-email-subject="${id}"]`);
+      const bodyInput = document.querySelector(`textarea[data-email-body="${id}"]`);
+      const subject = subjectInput.value.trim();
+      const body = bodyInput.value.trim();
+      if (!subject || !body) return;
+      btn.disabled = true;
+      btn.textContent = 'Sending...';
+      const r = await fetch('/api/awd/accounts/' + id + '/send-email', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ subject, body }) });
+      const d = await r.json();
+      btn.disabled = false;
+      btn.textContent = 'Send email (auto-logs)';
+      if (d.error) { alert(d.error); return; }
+      if (d.entry) {
+        LOGS[id] = LOGS[id] || [];
+        LOGS[id].push(d.entry);
+        subjectInput.value = '';
+        bodyInput.value = '';
+        refreshHist(id);
+        flashSaved(id);
       }
     });
   });
