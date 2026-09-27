@@ -861,8 +861,42 @@ function apolloRequestServer(path, body, apiKey) {
 
 app.get('/api/awd/prospects', requireAuth, async (req, res) => {
   try {
-    const rows = await supabase('GET', '/rest/v1/awd_prospects?select=*&order=created_at.desc&limit=200');
+    // Only pending-review prospects - saved ones live in awd_accounts, rejected ones are hidden
+    const rows = await supabase('GET', "/rest/v1/awd_prospects?status=eq.new&select=*&order=created_at.desc&limit=200");
     res.json({ prospects: rows || [] });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+app.post('/api/awd/prospects/:id/save', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await supabase('GET', `/rest/v1/awd_prospects?id=eq.${id}&select=*`);
+    const p = (rows || [])[0];
+    if (!p) return res.json({ error: 'Prospect not found' });
+    const accountId = 'apollo_' + (p.apollo_id || id) + '_' + Date.now().toString(36);
+    const account = await supabase('POST', '/rest/v1/awd_accounts', {
+      id: accountId,
+      name: p.company || `${p.firstname} ${p.lastname}`,
+      play_group: 'apollo',
+      note: 'Sourced via Apollo pull, matched target criteria.',
+      status: 'not_started',
+      contact_name: `${p.firstname} ${p.lastname}`.trim(),
+      contact_email: p.email
+    });
+    await supabase('PATCH', `/rest/v1/awd_prospects?id=eq.${id}`, { status: 'saved' });
+    res.json({ success: true, account: Array.isArray(account) ? account[0] : account });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+app.post('/api/awd/prospects/:id/reject', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await supabase('PATCH', `/rest/v1/awd_prospects?id=eq.${id}`, { status: 'rejected' });
+    res.json({ success: true });
   } catch (e) {
     res.json({ error: e.message });
   }
