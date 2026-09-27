@@ -64,6 +64,17 @@ window.fetch=function(u,o){
   .hist{font-size:12px;color:#555;}
   .hist div{padding:3px 0;border-top:1px dashed #eee;}
   .loading{color:var(--text-3);font-size:13px;padding:20px 0;}
+  .filter-btn{background:#fff;border:1px solid #ccc;color:var(--text-2);border-radius:999px;padding:5px 13px;font-size:12px;font-weight:600;cursor:pointer;margin-top:0;}
+  .filter-btn.active{background:var(--moz);border-color:var(--moz);color:#fff;}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap;}
+  .src-sister{background:#e6f1fb;color:#0c447c;}
+  .src-winback{background:#faece7;color:#712b13;}
+  .src-self_sourced{background:#eeedfe;color:#3c3489;}
+  .src-apollo{background:#faeeda;color:#633806;}
+  .eng-engaged{background:#d6f5df;color:#167a3d;}
+  .eng-unengaged{background:#eee;color:#666;}
+  .eng-hold{background:#fde2e1;color:#b3261e;}
+  .prospect-row{border-bottom:1px solid #eee;}
 </style>
 </head>
 <body>
@@ -75,35 +86,31 @@ window.fetch=function(u,o){
 
   <div id="loading" class="loading">Loading accounts…</div>
 
-  <div class="section" id="sisterSection" style="display:none;">
-    <h2>Sister-location leads</h2>
-    <table><tbody id="sisterBody"></tbody></table>
-  </div>
+  <div class="section" id="unifiedSection" style="display:none;">
+    <h2>All contacts</h2>
+    <div id="filterBar" style="margin-bottom:14px;display:flex;gap:6px;flex-wrap:wrap;"></div>
 
-  <div class="section" id="winbackSection" style="display:none;">
-    <h2>Win-back accounts (lapsed, credit on file, no sales this period)</h2>
-    <table><tbody id="winbackBody"></tbody></table>
-  </div>
-
-  <div class="section" id="selfSourcedSection">
-    <h2>Self-sourced prospects (found manually, not from any list)</h2>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:14px;align-items:end;">
-      <div>
-        <label style="font-size:12px;color:#888;">Company name</label>
-        <input id="ms-name" placeholder="Company name" style="width:100%;" />
+    <div style="margin-bottom:16px;padding:12px;background:#f7f7f5;border-radius:8px;">
+      <div style="font-size:12px;color:#888;margin-bottom:8px;font-weight:600;">Add a self-sourced prospect (found manually, not from any list)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;">
+        <div>
+          <label style="font-size:12px;color:#888;">Company name</label>
+          <input id="ms-name" placeholder="Company name" style="width:100%;" />
+        </div>
+        <div>
+          <label style="font-size:12px;color:#888;">Contact name</label>
+          <input id="ms-contact-name" placeholder="Contact name" style="width:100%;" />
+        </div>
+        <div>
+          <label style="font-size:12px;color:#888;">Contact email</label>
+          <input id="ms-contact-email" placeholder="Contact email" style="width:100%;" />
+        </div>
+        <button id="ms-add">Add prospect</button>
       </div>
-      <div>
-        <label style="font-size:12px;color:#888;">Contact name</label>
-        <input id="ms-contact-name" placeholder="Contact name" style="width:100%;" />
-      </div>
-      <div>
-        <label style="font-size:12px;color:#888;">Contact email</label>
-        <input id="ms-contact-email" placeholder="Contact email" style="width:100%;" />
-      </div>
-      <button id="ms-add">Add prospect</button>
+      <textarea id="ms-note" placeholder="How you found them / why they're a fit..." style="width:100%;margin-top:8px;"></textarea>
     </div>
-    <textarea id="ms-note" placeholder="How you found them / why they're a fit..." style="width:100%;margin-bottom:10px;"></textarea>
-    <table><tbody id="selfSourcedBody"></tbody></table>
+
+    <table><tbody id="unifiedBody"></tbody></table>
   </div>
 
   <div class="section" id="prospectSection">
@@ -166,6 +173,15 @@ function historyFor(id) {
 
 const CHANNELS = ['note','phone','email','text','linkedin','facebook','instagram'];
 const CHANNEL_LABEL = { note:'Note', phone:'Phone', email:'Email', text:'Text', linkedin:'LinkedIn', facebook:'Facebook', instagram:'Instagram' };
+const SOURCE_LABEL = { sister:'Sister-location', winback:'Win-back', self_sourced:'Self-sourced', apollo:'New Prospect' };
+const FILTERS = [['all','All'],['sister','Sister-location'],['winback','Win-back'],['self_sourced','Self-sourced'],['apollo','New Prospect']];
+let activeFilter = 'all';
+
+function engagementInfo(status) {
+  if (status === 'responded' || status === 'converted') return { label: 'Engaged', cls: 'eng-engaged' };
+  if (status === 'do_not_contact') return { label: 'Hold', cls: 'eng-hold' };
+  return { label: 'Unengaged', cls: 'eng-unengaged' };
+}
 
 function rowHtml(a) {
   const hist = historyFor(a.id);
@@ -173,9 +189,12 @@ function rowHtml(a) {
     ? hist.map(h => `<div><strong>${new Date(h.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> [${CHANNEL_LABEL[h.channel]||'Note'}] — ${h.note}</div>`).join('')
     : '<div style="color:#aaa;">No entries yet</div>';
   const channelOptions = CHANNELS.map(c => `<option value="${c}">${CHANNEL_LABEL[c]}</option>`).join('');
+  const eng = engagementInfo(a.status);
   return `<tr>
-    <td style="width:20%">
-      <div class="acct-name">${a.name}</div><div class="acct-note">${a.note || ''}</div>
+    <td style="width:17%">
+      <span class="badge src-${a.play_group}">${SOURCE_LABEL[a.play_group] || a.play_group}</span>
+      <span class="badge ${eng.cls}" style="margin-left:4px;">${eng.label}</span>
+      <div class="acct-name" style="margin-top:6px;">${a.name}</div><div class="acct-note">${a.note || ''}</div>
       <input data-contact-name="${a.id}" placeholder="Contact name" value="${a.contact_name || ''}" style="margin-top:6px;" />
       <input data-contact-email="${a.id}" placeholder="Contact email" value="${a.contact_email || ''}" style="margin-top:4px;" />
     </td>
@@ -203,15 +222,26 @@ function rowHtml(a) {
   </tr>`;
 }
 
+function renderFilterBar() {
+  const bar = document.getElementById('filterBar');
+  bar.innerHTML = FILTERS.map(([key, label]) => {
+    const count = key === 'all' ? ACCOUNTS.length : ACCOUNTS.filter(a => a.play_group === key).length;
+    return `<button class="filter-btn${key === activeFilter ? ' active' : ''}" data-filter-key="${key}">${label} (${count})</button>`;
+  }).join('');
+  bar.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeFilter = btn.getAttribute('data-filter-key');
+      render();
+    });
+  });
+}
+
 function render() {
-  const sister = ACCOUNTS.filter(a => a.play_group === 'sister');
-  const winback = ACCOUNTS.filter(a => a.play_group === 'winback');
-  const selfSourced = ACCOUNTS.filter(a => a.play_group === 'self_sourced');
-  document.getElementById('sisterBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + sister.map(rowHtml).join('');
-  document.getElementById('winbackBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + winback.map(rowHtml).join('');
-  document.getElementById('selfSourcedBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` + (selfSourced.length ? selfSourced.map(rowHtml).join('') : '');
-  document.getElementById('sisterSection').style.display = '';
-  document.getElementById('winbackSection').style.display = '';
+  renderFilterBar();
+  const visible = activeFilter === 'all' ? ACCOUNTS : ACCOUNTS.filter(a => a.play_group === activeFilter);
+  document.getElementById('unifiedBody').innerHTML = `<tr><th>Account</th><th>Status</th><th>Log this interaction</th><th>History</th></tr>` +
+    (visible.length ? visible.map(rowHtml).join('') : '<tr><td colspan="4" style="color:#aaa;padding:14px 0;">No accounts in this view.</td></tr>');
+  document.getElementById('unifiedSection').style.display = '';
   document.getElementById('loading').style.display = 'none';
 
   function refreshHist(id) {
@@ -346,15 +376,39 @@ loadCriteria();
 
 function renderProspects(list) {
   const body = document.getElementById('prospectsBody');
-  if (!list.length) { body.innerHTML = '<tr><td style="color:#aaa;font-size:13px;">No prospects pulled yet.</td></tr>'; return; }
-  body.innerHTML = `<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Location</th></tr>` +
-    list.map(p => `<tr>
+  if (!list.length) { body.innerHTML = '<tr><td style="color:#aaa;font-size:13px;">No prospects pending review.</td></tr>'; return; }
+  body.innerHTML = `<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Location</th><th>Review</th></tr>` +
+    list.map(p => `<tr class="prospect-row" data-prospect-row="${p.id}">
       <td>${p.firstname} ${p.lastname}</td>
       <td>${p.company || ''}</td>
       <td>${p.email || ''}</td>
       <td>${p.phone || ''}</td>
       <td>${[p.city, p.state].filter(Boolean).join(', ')}</td>
+      <td>
+        <button data-save-prospect="${p.id}" style="background:#167a3d;padding:5px 10px;font-size:12px;">Save as contact</button>
+        <button data-reject-prospect="${p.id}" style="background:#888;padding:5px 10px;font-size:12px;">Discard</button>
+      </td>
     </tr>`).join('');
+
+  body.querySelectorAll('[data-save-prospect]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-save-prospect');
+      btn.disabled = true;
+      const r = await fetch('/api/awd/prospects/' + id + '/save', { method: 'POST' });
+      const d = await r.json();
+      if (d.error) { alert(d.error); btn.disabled = false; return; }
+      document.querySelector(`[data-prospect-row="${id}"]`).remove();
+      if (d.account) { ACCOUNTS.push(d.account); render(); }
+    });
+  });
+  body.querySelectorAll('[data-reject-prospect]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.getAttribute('data-reject-prospect');
+      btn.disabled = true;
+      await fetch('/api/awd/prospects/' + id + '/reject', { method: 'POST' });
+      document.querySelector(`[data-prospect-row="${id}"]`).remove();
+    });
+  });
 }
 
 async function loadProspects() {
