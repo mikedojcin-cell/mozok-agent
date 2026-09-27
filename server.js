@@ -866,13 +866,72 @@ app.post('/api/awd/accounts/:id/status', requireAuth, async (req, res) => {
   }
 });
 
+app.post('/api/awd/accounts/:id/contact', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { contact_name, contact_email } = req.body;
+  try {
+    await supabase('PATCH', `/rest/v1/awd_accounts?id=eq.${id}`, { contact_name: contact_name || null, contact_email: contact_email || null, updated_at: new Date().toISOString() });
+    res.json({ success: true });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
 app.post('/api/awd/accounts/:id/log', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { note } = req.body;
+  const { note, channel } = req.body;
   if (!note || !note.trim()) return res.json({ error: 'Empty note' });
+  const allowedChannels = ['note', 'phone', 'email', 'text', 'linkedin', 'facebook', 'instagram'];
+  const ch = allowedChannels.includes(channel) ? channel : 'note';
   try {
-    const result = await supabase('POST', '/rest/v1/awd_account_log', { account_id: id, note: note.trim() });
+    const result = await supabase('POST', '/rest/v1/awd_account_log', { account_id: id, note: note.trim(), channel: ch });
     res.json({ success: true, entry: Array.isArray(result) ? result[0] : result });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+// Send an email from the tool and auto-log it — no separate manual note needed,
+// per Mike's ask: an action taken through the tool should log itself.
+app.post('/api/awd/accounts/:id/send-email', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { subject, body: emailBody } = req.body;
+  if (!subject || !emailBody) return res.json({ error: 'Missing subject or body' });
+  try {
+    const rows = await supabase('GET', `/rest/v1/awd_accounts?id=eq.${id}&select=contact_email,contact_name,name`);
+    const account = (rows || [])[0];
+    if (!account || !account.contact_email) return res.json({ error: 'No contact email on file for this account — add one first.' });
+
+    const tenantId = process.env.TEST_SEND_TENANT_ID;
+    const clientId = process.env.TEST_SEND_CLIENT_ID;
+    const clientSecret = process.env.TEST_SEND_CLIENT_SECRET;
+    const userEmail = process.env.TEST_SEND_USER_EMAIL || 'mike@mozok.co';
+    if (!tenantId || !clientId || !clientSecret) return res.json({ error: 'Email credentials not configured.' });
+
+    const tokenRes = await getToken(tenantId, clientId, clientSecret);
+    if (!tokenRes.access_token) return res.json({ error: '[' + (tokenRes.error || 'token_error') + '] ' + (tokenRes.error_description || 'Token failed') });
+
+    const htmlBody = emailBody.replace(/\n/g, '<br>');
+    const msgBody = {
+      message: {
+        subject,
+        body: { contentType: 'html', content: htmlBody },
+        toRecipients: [{ emailAddress: { address: account.contact_email } }],
+        from: { emailAddress: { address: userEmail } }
+      },
+      saveToSentItems: true
+    };
+    const r = await graphCall(tokenRes.access_token, 'POST', `/v1.0/users/${userEmail}/sendMail`, msgBody);
+    if (r.status !== 202) {
+      return res.json({ error: (r.data?.error?.code ? '[' + r.data.error.code + '] ' : '') + (r.data?.error?.message || `Send failed (${r.status})`) });
+    }
+
+    const logResult = await supabase('POST', '/rest/v1/awd_account_log', {
+      account_id: id,
+      channel: 'email',
+      note: `Email sent to ${account.contact_email} — subject: "${subject}"`
+    });
+    res.json({ success: true, entry: Array.isArray(logResult) ? logResult[0] : logResult });
   } catch (e) {
     res.json({ error: e.message });
   }
