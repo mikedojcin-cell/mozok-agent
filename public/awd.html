@@ -196,6 +196,7 @@ function rowHtml(a) {
       <span class="badge ${eng.cls}" style="margin-left:4px;">${eng.label}</span>
       <div class="acct-name" style="margin-top:6px;">${a.name}</div><div class="acct-note">${a.note || ''}</div>
       <input data-contact-name="${a.id}" placeholder="Contact name" value="${a.contact_name || ''}" style="margin-top:6px;" />
+      <input data-contact-title="${a.id}" placeholder="Title (e.g. Purchasing Manager)" value="${a.contact_title || ''}" style="margin-top:4px;" />
       <input data-contact-email="${a.id}" placeholder="Contact email" value="${a.contact_email || ''}" style="margin-top:4px;" />
     </td>
     <td style="width:10%">
@@ -263,15 +264,18 @@ function render() {
       a.status = sel.value;
     });
 
-    // Contact name/email — save on blur, no separate button needed
+    // Contact name/title/email — save on blur, no separate button needed
     const nameInput = document.querySelector(`input[data-contact-name="${a.id}"]`);
+    const titleInput = document.querySelector(`input[data-contact-title="${a.id}"]`);
     const emailInput = document.querySelector(`input[data-contact-email="${a.id}"]`);
     async function saveContact() {
-      await fetch('/api/awd/accounts/' + a.id + '/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_name: nameInput.value.trim(), contact_email: emailInput.value.trim() }) });
+      await fetch('/api/awd/accounts/' + a.id + '/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contact_name: nameInput.value.trim(), contact_title: titleInput.value.trim(), contact_email: emailInput.value.trim() }) });
       a.contact_name = nameInput.value.trim();
+      a.contact_title = titleInput.value.trim();
       a.contact_email = emailInput.value.trim();
     }
     nameInput.addEventListener('blur', saveContact);
+    titleInput.addEventListener('blur', saveContact);
     emailInput.addEventListener('blur', saveContact);
   });
 
@@ -377,9 +381,10 @@ loadCriteria();
 function renderProspects(list) {
   const body = document.getElementById('prospectsBody');
   if (!list.length) { body.innerHTML = '<tr><td style="color:#aaa;font-size:13px;">No prospects pending review.</td></tr>'; return; }
-  body.innerHTML = `<tr><th>Name</th><th>Company</th><th>Email</th><th>Phone</th><th>Location</th><th>Review</th></tr>` +
+  body.innerHTML = `<tr><th>Name</th><th>Title</th><th>Company</th><th>Email</th><th>Phone</th><th>Location</th><th>Review</th></tr>` +
     list.map(p => `<tr class="prospect-row" data-prospect-row="${p.id}">
       <td>${p.firstname} ${p.lastname}</td>
+      <td>${p.title || '<span style="color:#aaa;">—</span>'}</td>
       <td>${p.company || ''}</td>
       <td>${p.email || ''}</td>
       <td>${p.phone || ''}</td>
