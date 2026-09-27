@@ -835,6 +835,48 @@ app.post('/api/campaign-settings', requireAuth, async (req, res) => {
 app.get('/login.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
 app.get('/onboarding.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'onboarding.html')));
 app.get('/dashboard.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
+app.get('/awd.html', (req, res) => res.sendFile(path.join(__dirname, 'public', 'awd.html')));
+
+// ─── AWD ACCOUNT TRACKER (protected) ────────────────────────────────────────
+// Deliberately separate tables (awd_accounts / awd_account_log) from
+// contacts/campaign_settings — this never touches the live Apollo sync or
+// email-send pipeline. Same requireAuth as everything else: any logged-in
+// Mozok user (i.e. Mike) can use it, no separate login system needed.
+
+app.get('/api/awd/accounts', requireAuth, async (req, res) => {
+  try {
+    const accounts = await supabase('GET', '/rest/v1/awd_accounts?select=*&order=play_group.asc,name.asc');
+    const logs = await supabase('GET', '/rest/v1/awd_account_log?select=*&order=created_at.desc');
+    res.json({ accounts: Array.isArray(accounts) ? accounts : [], logs: Array.isArray(logs) ? logs : [] });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+app.post('/api/awd/accounts/:id/status', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  const allowed = ['not_started', 'attempted', 'responded', 'converted', 'do_not_contact'];
+  if (!allowed.includes(status)) return res.json({ error: 'Invalid status' });
+  try {
+    await supabase('PATCH', `/rest/v1/awd_accounts?id=eq.${id}`, { status, updated_at: new Date().toISOString() });
+    res.json({ success: true });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+app.post('/api/awd/accounts/:id/log', requireAuth, async (req, res) => {
+  const { id } = req.params;
+  const { note } = req.body;
+  if (!note || !note.trim()) return res.json({ error: 'Empty note' });
+  try {
+    const result = await supabase('POST', '/rest/v1/awd_account_log', { account_id: id, note: note.trim() });
+    res.json({ success: true, entry: Array.isArray(result) ? result[0] : result });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
 const PORT = process.env.PORT || 3000;
