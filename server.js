@@ -843,12 +843,12 @@ app.get('/awd.html', (req, res) => res.sendFile(path.join(__dirname, 'public', '
 // email-send pipeline. Same requireAuth as everything else: any logged-in
 // Mozok user (i.e. Mike) can use it, no separate login system needed.
 
-function apolloRequestServer(path, body) {
+function apolloRequestServer(path, body, apiKey) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const req2 = https.request({
       hostname: 'api.apollo.io', path, method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': process.env.APOLLO_KEY }
+      headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache', 'X-Api-Key': apiKey || process.env.APOLLO_KEY }
     }, (res2) => {
       let b = ''; res2.on('data', c => b += c);
       res2.on('end', () => { try { resolve(JSON.parse(b)); } catch (e) { reject(e); } });
@@ -869,18 +869,19 @@ app.get('/api/awd/prospects', requireAuth, async (req, res) => {
 });
 
 app.post('/api/awd/prospects/pull', requireAuth, async (req, res) => {
-  if (!process.env.APOLLO_KEY) return res.json({ error: 'APOLLO_KEY not configured on this server.' });
   try {
     const rows = await supabase('GET', '/rest/v1/awd_prospect_criteria?id=eq.1&select=*');
     const c = (rows || [])[0];
     if (!c || !c.active) return res.json({ error: 'Prospect criteria is not active.' });
+    const apolloKey = c.apollo_key || process.env.APOLLO_KEY;
+    if (!apolloKey) return res.json({ error: 'No Apollo key found - add one via the AWD tracker or set APOLLO_KEY.' });
 
     const industries = (c.industries || '').split(',').map(s => s.trim()).filter(Boolean);
     const titles = (c.job_titles || '').split(',').map(s => s.trim()).filter(Boolean);
     const locations = (c.locations || '').split(';').map(s => s.trim()).filter(Boolean);
 
     const apolloParams = {
-      api_key: process.env.APOLLO_KEY,
+      api_key: apolloKey,
       person_titles: titles.length ? titles : undefined,
       person_locations: locations.length ? locations : undefined,
       organization_num_employees_ranges: [`${c.company_size_min || 1},${c.company_size_max || 200}`],
@@ -889,15 +890,15 @@ app.post('/api/awd/prospects/pull', requireAuth, async (req, res) => {
     };
     if (industries.length) apolloParams.q_organization_keyword_tags = industries;
 
-    const apolloData = await apolloRequestServer('/v1/mixed_people/api_search', apolloParams);
+    const apolloData = await apolloRequestServer('/v1/mixed_people/api_search', apolloParams, apolloKey);
     const people = apolloData.people || [];
-    if (!people.length) return res.json({ prospects: [], message: 'Apollo returned 0 results for this criteria.' });
+    if (!people.length) return res.json({ prospects: [], message: 'Apollo returned 0 results for this criteria.', apolloRaw: apolloData.error || undefined });
 
     // Enrich for verified emails, same pattern as sync-contacts.js
     const enriched = [];
     for (let i = 0; i < people.length; i += 10) {
       const batch = people.slice(i, i + 10).map(p => ({ id: p.id, first_name: p.first_name, last_name: p.last_name || '', organization_name: p.organization ? p.organization.name : '' }));
-      const matchResult = await apolloRequestServer('/v1/people/bulk_match', { api_key: process.env.APOLLO_KEY, details: batch, reveal_personal_emails: false });
+      const matchResult = await apolloRequestServer('/v1/people/bulk_match', { api_key: apolloKey, details: batch, reveal_personal_emails: false }, apolloKey);
       enriched.push(...(matchResult.matches || []));
     }
     const emailMap = {};
@@ -925,7 +926,8 @@ app.post('/api/awd/prospects/pull', requireAuth, async (req, res) => {
 
 app.get('/api/awd/prospect-criteria', requireAuth, async (req, res) => {
   try {
-    const rows = await supabase('GET', '/rest/v1/awd_prospect_criteria?id=eq.1&select=*');
+    // apollo_key deliberately excluded - never sent back to the browser once saved
+    const rows = await supabase('GET', '/rest/v1/awd_prospect_criteria?id=eq.1&select=id,target_profile,industries,job_titles,locations,company_size_min,company_size_max,active,updated_at');
     res.json({ criteria: (rows || [])[0] || {} });
   } catch (e) {
     res.json({ error: e.message });
@@ -933,15 +935,19 @@ app.get('/api/awd/prospect-criteria', requireAuth, async (req, res) => {
 });
 
 app.post('/api/awd/prospect-criteria', requireAuth, async (req, res) => {
-  const { target_profile, industries, job_titles, locations, company_size_min, company_size_max, active } = req.body;
+  const { target_profile, industries, job_titles, locations, company_size_min, company_size_max, active, apollo_key } = req.body;
   try {
-    await supabase('PATCH', '/rest/v1/awd_prospect_criteria?id=eq.1', {
+    const patch = {
       target_profile, industries, job_titles, locations,
       company_size_min: company_size_min || 1,
       company_size_max: company_size_max || 200,
       active: !!active,
       updated_at: new Date().toISOString()
-    });
+    };
+    // Only touch apollo_key if the caller actually sent a non-empty value,
+    // so leaving the field blank on save doesn't wipe out a previously stored key.
+    if (apollo_key && apollo_key.trim()) patch.apollo_key = apollo_key.trim();
+    await supabase('PATCH', '/rest/v1/awd_prospect_criteria?id=eq.1', patch);
     res.json({ success: true });
   } catch (e) {
     res.json({ error: e.message });
