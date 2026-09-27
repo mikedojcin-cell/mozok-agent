@@ -868,6 +868,24 @@ app.post('/api/awd/prospect-criteria', requireAuth, async (req, res) => {
   }
 });
 
+// Manually log a prospect Mike found on his own - not from any list, no
+// Apollo pull, no invoice data. Free-text company entry.
+app.post('/api/awd/accounts/manual', requireAuth, async (req, res) => {
+  const { name, note, contact_name, contact_email } = req.body;
+  if (!name || !name.trim()) return res.json({ error: 'Company name required' });
+  const id = 'manual_' + name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40) + '_' + Date.now().toString(36);
+  try {
+    const result = await supabase('POST', '/rest/v1/awd_accounts', {
+      id, name: name.trim(), play_group: 'self_sourced',
+      note: note ? note.trim() : '', status: 'not_started',
+      contact_name: contact_name || null, contact_email: contact_email || null
+    });
+    res.json({ success: true, account: Array.isArray(result) ? result[0] : result });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
 app.get('/api/awd/accounts', requireAuth, async (req, res) => {
   try {
     const accounts = await supabase('GET', '/rest/v1/awd_accounts?select=*&order=play_group.asc,name.asc');
