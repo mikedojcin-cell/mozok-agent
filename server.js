@@ -883,7 +883,8 @@ app.post('/api/awd/prospects/:id/save', requireAuth, async (req, res) => {
       note: 'Sourced via Apollo pull, matched target criteria.',
       status: 'not_started',
       contact_name: `${p.firstname} ${p.lastname}`.trim(),
-      contact_email: p.email
+      contact_email: p.email,
+      contact_title: p.title || null
     });
     await supabase('PATCH', `/rest/v1/awd_prospects?id=eq.${id}`, { status: 'saved' });
     res.json({ success: true, account: Array.isArray(account) ? account[0] : account });
@@ -942,6 +943,7 @@ app.post('/api/awd/prospects/pull', requireAuth, async (req, res) => {
       apollo_id: p.id,
       firstname: p.first_name || '',
       lastname: p.last_name || '',
+      title: p.title || '',
       email: emailMap[p.id],
       company: p.organization ? p.organization.name : '',
       phone: (p.phone_numbers && p.phone_numbers[0]) ? p.phone_numbers[0].raw_number : '',
@@ -1031,9 +1033,9 @@ app.post('/api/awd/accounts/:id/status', requireAuth, async (req, res) => {
 
 app.post('/api/awd/accounts/:id/contact', requireAuth, async (req, res) => {
   const { id } = req.params;
-  const { contact_name, contact_email } = req.body;
+  const { contact_name, contact_email, contact_title } = req.body;
   try {
-    await supabase('PATCH', `/rest/v1/awd_accounts?id=eq.${id}`, { contact_name: contact_name || null, contact_email: contact_email || null, updated_at: new Date().toISOString() });
+    await supabase('PATCH', `/rest/v1/awd_accounts?id=eq.${id}`, { contact_name: contact_name || null, contact_email: contact_email || null, contact_title: contact_title || null, updated_at: new Date().toISOString() });
     res.json({ success: true });
   } catch (e) {
     res.json({ error: e.message });
