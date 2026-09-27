@@ -843,6 +843,31 @@ app.get('/awd.html', (req, res) => res.sendFile(path.join(__dirname, 'public', '
 // email-send pipeline. Same requireAuth as everything else: any logged-in
 // Mozok user (i.e. Mike) can use it, no separate login system needed.
 
+app.get('/api/awd/prospect-criteria', requireAuth, async (req, res) => {
+  try {
+    const rows = await supabase('GET', '/rest/v1/awd_prospect_criteria?id=eq.1&select=*');
+    res.json({ criteria: (rows || [])[0] || {} });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
+app.post('/api/awd/prospect-criteria', requireAuth, async (req, res) => {
+  const { target_profile, industries, job_titles, locations, company_size_min, company_size_max, active } = req.body;
+  try {
+    await supabase('PATCH', '/rest/v1/awd_prospect_criteria?id=eq.1', {
+      target_profile, industries, job_titles, locations,
+      company_size_min: company_size_min || 1,
+      company_size_max: company_size_max || 200,
+      active: !!active,
+      updated_at: new Date().toISOString()
+    });
+    res.json({ success: true });
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
 app.get('/api/awd/accounts', requireAuth, async (req, res) => {
   try {
     const accounts = await supabase('GET', '/rest/v1/awd_accounts?select=*&order=play_group.asc,name.asc');
