@@ -71,10 +71,18 @@ app.use('/api/generate-post', requireAuth);
 
 // ─── HELPERS ────────────────────────────────────────────────────────────────────
 
-async function supabase(method, endpoint, body) {
+async function supabase(method, endpoint, body, preferOverride) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
     const url = new URL(SUPABASE_URL + endpoint);
+    // Default Prefer header never included resolution=merge-duplicates, so any
+    // POST with ?on_conflict=... silently 409'd on a duplicate key - the
+    // "upsert" did nothing on every call after the first, and no caller ever
+    // checked for that error shape. preferOverride lets specific upsert call
+    // sites (see prospects/pull) opt into real upsert behavior. Return
+    // contract is unchanged - still resolves directly to the parsed body -
+    // so every existing caller in this file keeps working exactly as before.
+    const preferHeader = preferOverride || (method === 'POST' ? 'return=representation' : '');
     const req = https.request({
       hostname: url.hostname,
       path: url.pathname + url.search,
@@ -83,7 +91,7 @@ async function supabase(method, endpoint, body) {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
         'Content-Type': 'application/json',
-        'Prefer': method === 'POST' ? 'return=representation' : '',
+        'Prefer': preferHeader,
         ...(data ? { 'Content-Length': Buffer.byteLength(data) } : {})
       }
     }, res => {
@@ -955,10 +963,18 @@ app.post('/api/awd/prospects/pull', requireAuth, async (req, res) => {
       status: 'new'
     }));
 
+    let saveError = null;
     if (prospects.length) {
-      await supabase('POST', '/rest/v1/awd_prospects?on_conflict=apollo_id', prospects);
+      const saveResult = await supabase('POST', '/rest/v1/awd_prospects?on_conflict=apollo_id', prospects, 'resolution=merge-duplicates,return=representation');
+      // Success = array of upserted rows. Error = plain object with a message/code.
+      if (!Array.isArray(saveResult)) {
+        saveError = (saveResult && (saveResult.message || saveResult.code)) ? `${saveResult.code || ''} ${saveResult.message || ''}`.trim() : 'Unknown database error - prospects were fetched from Apollo but not saved.';
+      }
     }
-    res.json({ prospects, message: `Pulled ${people.length}, ${prospects.length} with verified emails.` });
+    if (saveError) {
+      return res.json({ prospects: [], error: 'Fetched from Apollo but failed to save: ' + saveError });
+    }
+    res.json({ prospects, message: `Pulled ${people.length}, ${prospects.length} with verified emails and saved.` });
   } catch (e) {
     res.json({ error: e.message });
   }
